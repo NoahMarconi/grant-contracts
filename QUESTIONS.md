@@ -15,6 +15,7 @@ Questions:
   - possibly use timestamp to avoid explicit states
 - can we remove multiple grant managers / voting / m-of-n and replace w/ msig?
 - use donor / grantee / manager
+- maybe use a getter for total funded (diff for ERC20 vs ETH)
 
 Design Question:
 - Currently, the grant manager is bound by the initial allocation %s, they can
@@ -29,7 +30,7 @@ Design Question:
   whether or not we can re-allocate funds between grantees, etc...
 
 Refunds:
-- Two refund operations:
+- Three refund operations:
   1. The grant does not reach the funding goal in time.
    - any donor can withdraw
    - bonus for auto-withdraw

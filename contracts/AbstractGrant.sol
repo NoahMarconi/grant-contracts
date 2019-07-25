@@ -10,72 +10,45 @@ contract AbstractGrant {
 
     /*----------  Globals  ----------*/
 
-    mapping(bytes32 => Grant) internal _grants;                                   // Grants mapped by GUID.
-    mapping(bytes32 => mapping(address => Grantee)) internal _grantees;           // Grantees mapped by Grant GUID then address.
-    mapping(bytes32 => mapping(address => Grantor)) internal _grantors;           // Grantors mapped by Grant GUID then address.
-    mapping(bytes32 => mapping(address => GrantManager)) internal _grantManagers; // GrantManagers mapped by Grant GUID then address.
-
+    mapping(uint256 => Grant) internal _grants;                                   // Grants mapped by GUID.
 
     /*----------  Types  ----------*/
 
-    enum GrantType {
-        FUND_THRESHOLD, // Funds unlocked if threshold met.
-        FUNDER_VOTE,    // Funds unlocked if funders approve.
-        MANAGED,        // Funds unlocked by grant_managers.
-        OPAQUE          // Other offchain method.
-    }
-
+    // TODO
     enum GrantStatus {
         INIT,    // Null status.
-        SIGNAL,  // Non-binding carbon vote.
-        FUND,    // Fundraising period.
-        PAY,     // Payout period.
-        REFUND,  // Refund to original funders.
-        COMPLETE // Grant complete.
+        SUCCESS,
+        DONE
     }
 
-    struct Payment {
-        uint8 approvals; // Sum of approval weights from Grant Managers.
-        uint256 amount;  // Amount to be paid.
-        bool paid;       // True if paid, false if not.
-    }
+    // 1. INIT is fine - contract deployment
+    // 2. remove SIGNAL
+    // 3. FUNDRAISING is fine - fund start timestamp passed
+    // 4. working
+    // 5. done (all refunds allowed)
 
-    struct Grantee {
-        bool isGrantee;     // Is a grantee.
-        address grantee;    // Address of grantee.
-        uint256 allocation; // Grant size for the grantee.
-        uint256 received;   // Cumulative payments received.
-        Payment[] payments; // Payments to the Grantee.
-    }
+    // INIT -> FUNDRAISING -> SUCCESS -> DONE
+    //                     -> DONE
 
-    struct Grantor {
-        bool isGrantor;   // Is a grantor.
-        address grantor;  // Address of grantor.
+
+    struct Donor {
         uint256 funded;   // Total amount funded.
         uint256 refunded; // Cumulative amount refunded.
     }
 
-    struct GrantManager {
-        bool isGrantManager;  // Is a grant manager.
-        address grantManager; // Address of grant manager.
-        uint8 weight;         // Value 0 to 100.
-    }
+    uint32 totalDonors;         // Cumulative number of Grantors for this grant.
+    address currency;             // (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
+    uint256 targetFunding;        // (Optional) Funding threshold required to release funds.
+    uint256 totalPayed;           // Cumulative funding payed to grantees.
+    uint256 totalRefunded;        // Cumulative funding refunded to grantors.
+    uint256 fundingExpiration;    // (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
+    uint256 contractExpiration;  // (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
+    GrantType grantType;          // Which grant success scheme to apply to this grant.
+    GrantStatus grantStatus;      // Current GrantStatus.
+    bytes extraData;              // Support for extensions to the Standard.
+    mapping(address => Donor);    // Donors by address
 
-    struct Grant {
-        uint16 totalGrantees;         // Number of Grantees for this grant.
-        uint16 totalGrantManagers;    // Number of GrantManagers for this grant.
-        uint32 totalGrantors;         // Cumulative number of Grantors for this grant.
-        address currency;             // (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
-        uint256 targetFunding;        // (Optional) Funding threshold required to release funds.
-        uint256 totalFunded;          // Cumulative funding received for this grant.
-        uint256 totalPayed;           // Cumulative funding payed to grantees.
-        uint256 totalRefunded;        // Cumulative funding refunded to grantors.
-        uint256 fundingExpiration;    // (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
-        uint256 executionExpiration;  // (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
-        GrantType grantType;          // Which grant success scheme to apply to this grant.
-        GrantStatus grantStatus;      // Current GrantStatus.
-        bytes extraData;              // Support for extensions to the Standard.
-    }
+    function getTotalFunding() {}
 
 
     /*----------  Events  ----------*/
@@ -130,6 +103,18 @@ contract AbstractGrant {
 
     /*----------  Methods  ----------*/
 
+    constructor(
+        address _grantee
+        address _manager
+        address currency,
+        uint256 targetFunding,
+        uint256 fundingExpiration,
+        uint256 contractExpiration
+    ) {
+        address grantee = _grantee
+        // ...
+    }
+
     /**
      * @dev Grant creation function. May be called by grantors, grantees, or any other relevant party.
      * @param grantees Recipients of unlocked funds and their respective allocations.
@@ -137,23 +122,11 @@ contract AbstractGrant {
      * @param currency (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
      * @param targetFunding (Optional) Funding threshold required to release funds.
      * @param fundingExpiration (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
-     * @param executionExpiration (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
+     * @param contractExpiration (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
      * @param grantType Which grant success scheme to apply to this grant.
      * @param extraData Support for extensions to the Standard.
      * @return GUID for this grant.
      */
-    function create(
-        Grantee[] memory grantees,
-        GrantManager[] memory grantManagers,
-        address currency,
-        uint256 targetFunding,
-        uint256 fundingExpiration,
-        uint256 executionExpiration,
-        GrantType grantType,
-        bytes memory extraData
-    )
-        public
-        returns (bytes32 id);
 
     /**
      * @dev Fund a grant proposal.
