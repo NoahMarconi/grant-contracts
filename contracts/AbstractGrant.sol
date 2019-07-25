@@ -39,6 +39,7 @@ contract AbstractGrant {
     uint32 totalDonors;         // Cumulative number of Grantors for this grant.
     address currency;             // (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
     uint256 targetFunding;        // (Optional) Funding threshold required to release funds.
+    uint256 totalFunding
     uint256 totalPayed;           // Cumulative funding payed to grantees.
     uint256 totalRefunded;        // Cumulative funding refunded to grantors.
     uint256 fundingExpiration;    // (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
@@ -157,6 +158,13 @@ contract AbstractGrant {
      * @param value Amount in WEI or GRAINS to fund.
      * @return True if successful, otherwise false.
      */
+
+
+    // MUST BE DONE
+    // any donor can receive up to their maximum
+    // - their fraction of (total funding - total spent) * (donor value / total funding)
+    // - only allow refunds in full
+    // - check that donor refund = 0
     function refund(bytes32 id, address grantor, uint256 value)
         public
         returns (uint256 balance);
