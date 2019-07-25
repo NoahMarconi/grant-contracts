@@ -1,4 +1,5 @@
 Questions:
+- can we combine grants structs
 - can we get rid of grant types?
 - can we reduce the # of grant status?
 - can we reduce # of roles (grantor / grantee)
@@ -13,6 +14,19 @@ Questions:
   - if expires then can propose again
   - possibly use timestamp to avoid explicit states
 - can we remove multiple grant managers / voting / m-of-n and replace w/ msig?
+- use donor / grantee / manager
+
+Design Question:
+- Currently, the grant manager is bound by the initial allocation %s, they can
+  not re-allocate the funds to grantees. So if there are two grantees each
+  50/50 and one sucks, the manager will be forced to refund 50% of the money,
+  they can't give it to the other not sucky grantee.
+  - Should we allow the manager to re-allocate?
+  - OR should we just do this as separate contracts with a single address?
+  - We do want to be able to batch grants so they don't have to hit separate
+    thresholds
+- Maybe design a "Manager" interface that implements whitelists of grantees,
+  whether or not we can re-allocate funds between grantees, etc...
 
 Refunds:
 - Two refund operations:
@@ -34,10 +48,15 @@ TODO:
 - auto refund if expiration and target not reached
 - use counter for ID
 - signal should be a function (yes or no)
+- uniqueness check on grantees
+  - also switch % to amount and check matches total
 
 Notes:
 - spawn new contract for each grant
 - send ETH directly to grant
+
+Spec Recommendations:
+- use clock not blocks
 
 Bonus:
 - prevent duplicate addresses
