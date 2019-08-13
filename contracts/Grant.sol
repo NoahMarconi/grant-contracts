@@ -16,21 +16,108 @@ contract Grant is FundThreshold, ISignal {
     using SafeMath for uint256;
 
 
-    /*----------  Constants  ----------*/
-
-    uint256 PRECISION_D = 10 ** 18;
-    uint256 PRECISION_M = 10 ** 16;
-
-
     /*----------  Modifiers  ----------*/
 
-    modifier isGrantee(bytes32 id) {
+    modifier isGrantee() {
         require(
-            _grantees[id][msg.sender].isGrantee,
+            grantees[msg.sender].targetFunding > 0,
             "isGrantee::Invalid Sender. Sender is not a grantee for this grant."
         );
 
         _;
+    }
+
+    modifier isDonor() {
+        require(
+            donors[msg.sender].funded > 0,
+            "isDonor::Invalid Sender. Sender is not a donor for this grant."
+        );
+
+        _;
+    }
+
+    modifier onlyManager() {
+        require(
+            msg.sender == manager,
+            "onlyManager::Invalid Sender. Sender is not the manager of this grant."
+        );
+
+        _;
+    }
+
+
+    /*----------  Constructor  ----------*/
+
+    /**
+     * @dev Grant creation function. May be called by grantors, grantees, or any other relevant party.
+     * @param _grantees Sorted recipients of unlocked funds.
+     * @param _amounts Respective allocations for each Grantee (must follow sort order of _grantees).
+     * @param _manager (Optional) Multisig or EOA address of grant manager.
+     * @param _currency (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
+     * @param _targetFunding (Optional) Funding threshold required to release funds.
+     * @param _fundingExpiration (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
+     * @param _contractExpiration (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
+     * @return true or transaction reverts.
+     */
+    constructor(
+        address[] _grantees,
+        uint256[] _amounts,
+        address _manager,
+        address _currency,
+        uint256 _targetFunding,
+        uint256 _fundingExpiration,
+        uint256 _contractExpiration
+    )
+        public
+        returns(bool)
+    {
+
+        require(
+            // solium-disable-next-line security/no-block-members
+            _fundingExpiration == 0 || _fundingExpiration > block.number,
+            "constructor::Invalid Argument. _fundingExpiration must be 0 or greater than current block."
+        );
+
+        require(
+            // solium-disable-next-line security/no-block-members
+            _contractExpiration == 0 || _contractExpiration > block.number,
+            "constructor::Invalid Argument. _contractExpiration must be 0 or greater than current block."
+        );
+
+        require(
+            grantees.length > 0,
+            "constructor::Invalid Argument. Must have one or more grantees."
+        );
+
+        // Initialize globals.
+        manager = _manager;
+        currency = _currency;
+        targetFunding = _targetFunding;
+        fundingExpiration = _fundingExpiration;
+        contractExpiration = _contractExpiration;
+        totalGrantees = _grantees.length;
+
+        // Initialize Grantees.
+        for (uint256 i = 0; i < _grantees.length; i++) {
+            address currentGrantee = _grantees[i];
+            address currentAmount = _amounts[i];
+
+            require(
+                currentAmount > 0,
+                "constructor::Invalid Argument. Grantee's allocation (currentAmount) must be greater than 0."
+            );
+    
+            if (i > 0) {
+                require(
+                    currentGrantee > grantees[i.sub(1)],
+                    "constructor::Invalid Argument. Grantee's address array must be sorted smallest to largest."
+                );
+            }
+
+            _grantees[currentGrantee].targetFunding = currentAmount;
+        }
+
+        return true;
     }
 
 
@@ -93,102 +180,6 @@ contract Grant is FundThreshold, ISignal {
 
 
     /*----------  Public Methods  ----------*/
-
-    /**
-     * @dev Grant creation function. May be called by grantors, grantees, or any other relevant party.
-     * @param grantees Recipients of unlocked funds and their respective allocations.
-     * @param grantManagers (Optional) Weighted managers of distribution of funds.
-     * @param currency (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
-     * @param targetFunding (Optional) Funding threshold required to release funds.
-     * @param fundingExpiration (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
-     * @param executionExpiration (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
-     * @param grantType Which grant success scheme to apply to this grant.
-     * @param extraData Support for extensions to the Standard.
-     * @return GUID for this grant.
-     */
-    function create(
-        Grantee[] memory grantees,
-        GrantManager[] memory grantManagers,
-        address currency,
-        uint256 targetFunding,
-        uint256 fundingExpiration,
-        uint256 executionExpiration,
-        GrantType grantType,
-        bytes memory extraData
-    )
-        public
-        returns (bytes32 id)
-    {
-        // GUID created by hashing sender address and previous block's hash.
-        // Provides a safe source of uniqueness as there is no benefit to
-        // manipulating keys (i.e. no reward for guessing RNG output).
-        //
-        // The one drawback of this approach is that the same address cannot
-        // create more than one grants in the same block (the second grant will
-        // fail due to the grant status not being GrantStatus.INIT).
-        bytes32 _id = keccak256(abi.encodePacked(
-            msg.sender,
-            // solium-disable-next-line security/no-block-members
-            blockhash(block.number.sub(1))
-        ));
-
-        require(
-            _grants[_id].grantStatus == GrantStatus.INIT,
-            "create::Status Error. Grant ID already in use."
-        );
-
-        require(
-            // solium-disable-next-line security/no-block-members
-            fundingExpiration == 0 || fundingExpiration > block.number,
-            "create::Invalid Argument. fundingExpiration must be 0 or greater than current block."
-        );
-
-        require(
-            // solium-disable-next-line security/no-block-members
-            executionExpiration == 0 || executionExpiration > block.number,
-            "create::Invalid Argument. executionExpiration must be 0 or greater than current block."
-        );
-
-        require(
-            grantees.length > 0,
-            "create::Invalid Argument. Must have one or more grantees."
-        );
-
-        // No uniqueness check, should be handled on client.
-        for (uint256 i = 0; i < grantees.length; i++) {
-            Grantee memory grantee = grantees[i];
-
-            require(
-                grantee.allocation <= 100 && grantee.allocation >= 0,
-                "create::Invalid Argument. Grantee's allocation must be a number between 1 and 100."
-            );
-
-            _grantees[_id][grantee.grantee].isGrantee = true;
-            _grantees[_id][grantee.grantee].grantee = grantee.grantee;
-            _grantees[_id][grantee.grantee].allocation = grantee.allocation;
-        }
-
-        // No uniqueness check, should be handled on client.
-        for (uint256 i = 0; i < grantManagers.length; i++) {
-            GrantManager memory grantManager = grantManagers[i];
-            grantManager.isGrantManager = true;
-            _grantManagers[_id][grantManager.grantManager] = grantManager;
-        }
-
-        _grants[_id].totalGrantees = uint16(grantees.length);
-        _grants[_id].totalGrantManagers = uint16(grantManagers.length);
-        _grants[_id].currency = currency;
-        _grants[_id].targetFunding = targetFunding;
-        _grants[_id].fundingExpiration = fundingExpiration;
-        _grants[_id].executionExpiration = executionExpiration;
-        _grants[_id].grantType = grantType;
-        _grants[_id].grantStatus = GrantStatus.SIGNAL;
-        _grants[_id].extraData = extraData;
-
-        emit LogStatusChange(_id, GrantStatus.SIGNAL);
-
-        return _id;
-    }
 
     /**
      * @dev Fund a grant proposal.

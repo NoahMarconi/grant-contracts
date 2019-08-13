@@ -12,6 +12,7 @@ contract AbstractGrant {
 
     address manager;                      // Multisig or EOA address to manage grant.
     uint256 totalDonors;                  // Cumulative number of Donors for this grant.
+    uint256 totalGrantees;                // Number of Grantees for this grant.
     address currency;                     // (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
     uint256 targetFunding;                // (Optional) Funding threshold required to release funds.
     uint256 totalFunding;                 // Cumulative funding donated by donors.
@@ -93,19 +94,8 @@ contract AbstractGrant {
 
     /*----------  Methods  ----------*/
 
-    constructor(
-        address _grantee,
-        address _manager,
-        address _currency,
-        uint256 _targetFunding,
-        uint256 _fundingExpiration,
-        uint256 _contractExpiration
-    )
-        public;
-
     /**
      * @dev Total funding getter.
-     * @param value Amount in WEI or GRAINS to fund.
      * @return Cumulative funding received for this grant.
      */
     function getTotalFunding()

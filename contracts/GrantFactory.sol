@@ -19,6 +19,9 @@ contract GrantFactory {
         address
     }
 
+
+events LogNewGrant
+
     /*----------  Methods  ----------*/
 
     /**
