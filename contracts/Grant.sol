@@ -10,7 +10,7 @@ import "./ISignal.sol";
 /**
  * @title Grants Spec Contract.
  * @dev Grant request, funding, and management.
- * @author @NoahMarconi @JFickel @ArnaudBrousseau
+ * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
 contract Grant is FundThreshold, ISignal {
     using SafeMath for uint256;

@@ -8,7 +8,7 @@ import "./AbstractGrant.sol";
  * @title Fund Threshold.
  * @dev Threshold based grant methods.
  *      Controls funding for grants when GrantType is threshold based.
- * @author @NoahMarconi @JFickel @ArnaudBrousseau
+ * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
 contract FundThreshold is AbstractGrant {
 

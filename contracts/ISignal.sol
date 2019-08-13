@@ -3,7 +3,7 @@ pragma solidity >=0.5.10 <0.6.0;
 /**
  * @title Carbonvote-like Signaling Interface.
  * @dev Receives Eth or Token Backed Votes. Vote tally takes place off chain.
- * @author @NoahMarconi @JFickel @ArnaudBrousseau
+ * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
 interface ISignal {
 
