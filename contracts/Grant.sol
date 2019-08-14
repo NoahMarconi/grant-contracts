@@ -110,7 +110,7 @@ contract Grant is FundThreshold, ISignal {
             if (i > 0) {
                 require(
                     currentGrantee > grantees[i.sub(1)],
-                    "constructor::Invalid Argument. Grantee's address array must be sorted smallest to largest."
+                    "constructor::Invalid Argument. Grantee's address array must be duplicate free and sorted smallest to largest."
                 );
             }
 
@@ -123,59 +123,45 @@ contract Grant is FundThreshold, ISignal {
 
     /*----------  Public Getters  ----------*/
 
-    /**
-     * @dev Grant Getter.
-     * @param id GUID for the grant to return.
-     * @return The Grant struct.
-     */
-    function getGrant(bytes32 id)
-        public
-        view
-        returns (Grant memory)
-    {
-        return _grants[id];
-    }
+    // TODO: missing getters.
 
     /**
-     * @dev Grantor Getter.
+     * @dev Donor Getter.
      * @param id GUID for the grant.
-     * @param grantor Address for the grantor.
-     * @return The Grantor struct.
+     * @param donor Address for the donor.
+     * @return The Donor struct.
      */
-    function getGrantor(bytes32 id, address grantor)
+    function getDonor(address donor)
         public
         view
-        returns (Grantor memory)
+        returns (Donor memory)
     {
-        return _grantors[id][grantor];
+        return donors[donor];
     }
 
     /**
      * @dev Grantee Getter.
-     * @param id GUID for the grant.
      * @param grantee Address for the grantee.
      * @return The Grantee struct.
      */
-    function getGrantee(bytes32 id, address grantee)
+    function getGrantee(address grantee)
         public
         view
         returns (Grantee memory)
     {
-        return _grantees[id][grantee];
+        return _grantees[grantee];
     }
 
     /**
-     * @dev GrantManager Getter.
-     * @param id GUID for the grant.
-     * @param grantManager Address for the grantManager.
-     * @return The GrantManager struct.
+     * @dev Manager Getter.
+     * @return The manager address.
      */
-    function getGrantManager(bytes32 id, address grantManager)
+    function getManager()
         public
         view
-        returns (GrantManager memory)
+        returns (address)
     {
-        return _grantManagers[id][grantManager];
+        return manager;
     }
 
 
@@ -183,11 +169,10 @@ contract Grant is FundThreshold, ISignal {
 
     /**
      * @dev Fund a grant proposal.
-     * @param id GUID for the grant to fund.
      * @param value Amount in WEI or GRAINS to fund.
      * @return Cumulative funding received for this grant.
      */
-    function fund(bytes32 id, uint256 value)
+    function fund(uint256 value)
         public
         payable
         returns (uint256 balance)

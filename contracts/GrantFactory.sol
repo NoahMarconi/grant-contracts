@@ -1,59 +1,79 @@
 pragma solidity >=0.5.10 <0.6.0;
 pragma experimental ABIEncoderV2;
 
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "./Grant.sol";
+
+
 /**
  * @title Grants Spec Abstract Contract.
  * @dev Grant request, funding, and management.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
 contract GrantFactory {
+    using SafeMath for uint256;
+
 
     /*----------  Globals  ----------*/
-
-    mapping(uint256 => Grant) internal _grants;  // Grants mapped by GUID.
-
-
-    /*----------  Types  ----------*/
-
-    struct Grant {
-        address
-    }
+    uint256 id;
+    mapping(uint256 => address) internal grants;  // Grants mapped by GUID.
 
 
-events LogNewGrant
+    /**
+     * @dev Grant creation.
+     * @param id Sequential identifier.
+     * @param grant Address of newly created grant.
+     */
+    event LogNewGrant(uint256 indexed id, address grant);
 
     /*----------  Methods  ----------*/
 
     /**
      * @dev Grant creation function. May be called by grantors, grantees, or any other relevant party.
-     * @param grantees Recipients of unlocked funds and their respective allocations.
-     * @param grantManagers (Optional) Weighted managers of distribution of funds.
-     * @param currency (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
-     * @param targetFunding (Optional) Funding threshold required to release funds.
-     * @param fundingExpiration (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
-     * @param contractExpiration (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
-     * @param grantType Which grant success scheme to apply to this grant.
-     * @param extraData Support for extensions to the Standard.
+     * @param _grantees Sorted recipients of unlocked funds.
+     * @param _amounts Respective allocations for each Grantee (must follow sort order of _grantees).
+     * @param _manager (Optional) Multisig or EOA address of grant manager.
+     * @param _currency (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
+     * @param _targetFunding (Optional) Funding threshold required to release funds.
+     * @param _fundingExpiration (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
+     * @param _contractExpiration (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
+     * @param _extraData Support for extensions to the Standard.
      * @return GUID for this grant.
      */
     function create(
-        Grantee[] memory grantees,
-        address grantManager,
-        address currency,
-        uint256 targetFunding,
-        uint256 fundingExpiration,
-        uint256 contractExpiration,
+        address[] _grantees,
+        uint256[] _amounts,
+        address _manager,
+        address _currency,
+        uint256 _targetFunding,
+        uint256 _fundingExpiration,
+        uint256 _contractExpiration,
         bytes memory extraData // implementation detail
     )
         public
-        returns (bytes32 id);
+        returns (uint256 id)
+    {
+        Grant grant = new Grant(
+            _grantees,
+            _amounts,
+            _manager,
+            _currency,
+            _targetFunding,
+            _fundingExpiration,
+            _contractExpiration
+        );
 
-    /**
-     * @dev Cancel grant and enable refunds.
-     * @param id GUID for the grant to refund.
-     * @return True if successful, otherwise false.
-     */
-    function cancelGrant(bytes32 id)
-        public
-        returns (uint256 balance);
+        // Store grant info.
+        uint256 grantId = id;
+        address grantAddress = address(grant);
+        grants[id] = grantAddress;
+
+        // Increment id counter.
+        id = id.add(1);
+
+        emit LogNewGrant(id, grantAddress);
+
+        return grantId;
+    }
+
 }
