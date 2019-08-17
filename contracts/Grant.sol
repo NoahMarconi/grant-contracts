@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
-import "./FundThreshold.sol";
+import "./AbstractGrant.sol";
 import "./ISignal.sol";
 
 
@@ -12,24 +12,24 @@ import "./ISignal.sol";
  * @dev Grant request, funding, and management.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-contract Grant is FundThreshold, ISignal {
+contract Grant is AbstractGrant, ISignal {
     using SafeMath for uint256;
 
 
     /*----------  Modifiers  ----------*/
 
-    modifier isGrantee() {
+    modifier onlyGrantee() {
         require(
-            grantees[msg.sender].targetFunding > 0,
+            isGrantee(msg.sender),
             "isGrantee::Invalid Sender. Sender is not a grantee for this grant."
         );
 
         _;
     }
 
-    modifier isDonor() {
+    modifier onlyDonor() {
         require(
-            donors[msg.sender].funded > 0,
+            isDonor(msg.sender),
             "isDonor::Invalid Sender. Sender is not a donor for this grant."
         );
 
@@ -38,7 +38,7 @@ contract Grant is FundThreshold, ISignal {
 
     modifier onlyManager() {
         require(
-            msg.sender == manager,
+            isManager(msg.sender),
             "onlyManager::Invalid Sender. Sender is not the manager of this grant."
         );
 
@@ -55,9 +55,8 @@ contract Grant is FundThreshold, ISignal {
      * @param _manager (Optional) Multisig or EOA address of grant manager.
      * @param _currency (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
      * @param _targetFunding (Optional) Funding threshold required to release funds.
-     * @param _fundingExpiration (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
-     * @param _contractExpiration (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
-     * @return true or transaction reverts.
+     * @param _fundingExpiration (Optional) Date after which votes OR funds (dependant on GrantType) cannot be sent.
+     * @param _contractExpiration (Optional) Date after which payouts must be complete or anyone can trigger refunds.
      */
     constructor(
         address[] _grantees,
@@ -69,19 +68,17 @@ contract Grant is FundThreshold, ISignal {
         uint256 _contractExpiration
     )
         public
-        returns(bool)
     {
-
         require(
-            // solium-disable-next-line security/no-block-members
-            _fundingExpiration == 0 || _fundingExpiration > block.number,
-            "constructor::Invalid Argument. _fundingExpiration must be 0 or greater than current block."
+        // solium-disable-next-line security/no-block-members
+            _fundingExpiration == 0 || _fundingExpiration > now,
+            "constructor::Invalid Argument. _fundingExpiration must be 0 or greater than current date."
         );
 
         require(
-            // solium-disable-next-line security/no-block-members
-            _contractExpiration == 0 || _contractExpiration > block.number,
-            "constructor::Invalid Argument. _contractExpiration must be 0 or greater than current block."
+        // solium-disable-next-line security/no-block-members
+            _contractExpiration == 0 || _contractExpiration > now,
+            "constructor::Invalid Argument. _contractExpiration must be 0 or greater than current date."
         );
 
         require(
@@ -98,6 +95,7 @@ contract Grant is FundThreshold, ISignal {
         totalGrantees = _grantees.length;
 
         // Initialize Grantees.
+        address lastAddress = address(0);
         for (uint256 i = 0; i < _grantees.length; i++) {
             address currentGrantee = _grantees[i];
             address currentAmount = _amounts[i];
@@ -106,24 +104,54 @@ contract Grant is FundThreshold, ISignal {
                 currentAmount > 0,
                 "constructor::Invalid Argument. Grantee's allocation (currentAmount) must be greater than 0."
             );
-    
-            if (i > 0) {
-                require(
-                    currentGrantee > grantees[i.sub(1)],
-                    "constructor::Invalid Argument. Grantee's address array must be duplicate free and sorted smallest to largest."
-                );
-            }
 
-            _grantees[currentGrantee].targetFunding = currentAmount;
+
+            require(
+                currentGrantee > lastAddress,
+                "constructor::Invalid Argument. Grantee's address array must be duplicate free and sorted smallest to largest."
+            );
+
+            require(
+                currentGrantee != _manager,
+                "constructor::Invalid Argument. _manager cannot be a Grantee."
+            );
+
+            lastAddress = currentGrantee;
+            grantees[currentGrantee].targetFunding = currentAmount;
         }
 
-        return true;
     }
 
 
+    /*----------  Public Helpers  ----------*/
+
+    function isGrantee(address toCheck)
+        public
+        view
+        returns(bool)
+    {
+        return grantees[toCheck].totalFunded > 0;
+    }
+
+    function isDonor(address toCheck)
+        public
+        view
+        returns(bool)
+    {
+        return donors[toCheck].funded > 0;
+    }
+
+    function isManager(address toCheck)
+        public
+        view
+        returns(bool)
+    {
+        return manager == toCheck;
+    }
+
     /*----------  Public Getters  ----------*/
 
-    // TODO: missing getters.
+    // TODO: are there additional getters needed?
 
     /**
      * @dev Donor Getter.
@@ -177,52 +205,51 @@ contract Grant is FundThreshold, ISignal {
         payable
         returns (uint256 balance)
     {
+
+        require(
+            grantStatus == GrantStatus.INIT,
+            "fund::Status Error. Must be GrantStatus.INIT to fund."
+        );
+
+        require(
+            // solium-disable-next-line security/no-block-members
+            fundingExpiration > now,
+            "fund::Date Error. fundingExpiration date has passed, cannot receive new donations."
+        );
+
+        uint256 newTotalFunding = totalFunding.add(value);
+
+        uint256 change;
+        if(newTotalFunding > targetFunding) {
+            change = newTotalFunding.sub(targetFunding);
+            newTotalFunding = targetFunding;
+        }
+
         // Defer to correct funding method.
-        if(_grants[id].currency == address(0)) {
-            require(
-                msg.value == value,
-                "fund::Invalid Argument. value must match msg.value."
-            );
+        if(currency == address(0)) {
+            fundWithEther(value, change);
         } else {
-            require(
-                IERC20(_grants[id].currency)
-                    .transferFrom(msg.sender, address(this), value),
-                "fund::Transfer Error. ERC20 token transferFrom failed."
-            );
+            fundWithToken(value, change);
         }
 
         // Record Contribution.
-        // Add new Grantor or add to existing Grantor funded total.
-        if (!_grantors[id][msg.sender].isGrantor) {
-            _grantors[id][msg.sender] = Grantor({
-                isGrantor: true,
-                grantor: msg.sender,
-                funded: value,
-                refunded: 0
-            });
-
-            _grants[id].totalGrantors = uint32(uint256(_grants[id].totalGrantors).add(1));
-        } else {
-            _grantors[id][msg.sender].funded = _grantors[id][msg.sender]
-                .funded.add(value);
+        if (!isDonor(msg.sender)) {
+            totalDonors = totalDonors.add(1);
         }
+        donors[msg.sender].funded = donors[msg.sender].funded.add(value);
 
         // Update funding tally.
-        balance = _grants[id].totalFunded.add(value);
-        _grants[id].totalFunded = balance;
+        totalFunding = newTotalFunding;
 
-        // Log event.
+        // Log events.
         emit LogFunding(id, msg.sender, value);
 
-        // May expand to handle variety of grantTypes.
-        uint256 result;
-        if (_grants[id].grantType == GrantType.FUND_THRESHOLD) {
-           result = FundThreshold.fund(id, value);
+        if (targetFunding == newTotalFunding) {
+            grantStatus = GrantStatus.SUCCESS;
+            emit LogStatusChange(GrantStatus.SUCCESS);
         }
 
-        return _grants[id].totalFunded
-            .sub(_grants[id].totalPayed)
-            .sub(_grants[id].totalRefunded);
+        return newTotalFunding;
     }
 
     /**
@@ -232,115 +259,55 @@ contract Grant is FundThreshold, ISignal {
      * @param value Amount in WEI or GRAINS to fund.
      * @return Remaining funding available in this grant.
      */
-    function payout(bytes32 id, address grantee, uint256 value)
+    function payout(address grantee, uint256 value)
         public
         returns (uint256 balance)
     {
-        // Accounts for over funded grants.
-        //
-        // Takes allocation percentage to determine Grantee's actual allocation
-        // of the total amount funded.
-        //
-        // Precise to 1 WEI if Ether.
-        uint256 actualAllocation;
-        if (_grantees[id][grantee].allocation < 100) {
-            uint256 allocation = _grantees[id][grantee].allocation;
-            actualAllocation = _grants[id].totalFunded
-                .mul(allocation.mul(PRECISION_M))
-                .div(PRECISION_D);
+
+        require(
+            grantStatus == GrantStatus.SUCCESS,
+            "payout::Status Error. Must be GrantStatus.SUCCESS to issue payment."
+        );
+
+        require(
+            isManager(msg.sender) || (isGrantee(msg.sender) && msg.sender == grantee),
+            "payout::Invalid Argument. If not a Manger, msg.sender must match grantee argument."
+        );
+
+        // Overloaded function. Manager calling approves a payout,
+        // Grantee calling withdraws payout.
+        if (isManager(msg.sender)) {
+            approvePayout(grantee, value);
         } else {
-            actualAllocation = _grants[id].totalFunded;
+            withdrawPayout(grantee, value);
         }
 
-        uint256 remainingAllocation = actualAllocation
-            .sub(_grantees[id][grantee].received);
-
-        require(
-            remainingAllocation >= value,
-            "payout::Invalid Argument. Value cannot exceed Grantee's remaining allocation."
-        );
-
-        require(
-            _grants[id].grantStatus == GrantStatus.PAY,
-            "payout::Status Error. Must be GrantStatus.PAY to issue payment."
-        );
-
-        require(
-            _grantManagers[id][msg.sender].isGrantManager || grantee == msg.sender,
-            "payout::Invalid Argument. If not a GrantManger, msg.sender must match grantee argument."
-        );
-
-
-        uint256 paymentsArrayLength = _grantees[id][grantee].payments.length;
-        // TODO: handle empty array
-        Payment memory lastPayment = _grantees[id][grantee].payments[paymentsArrayLength - 1];
-        bool lastPaymentPaid = lastPayment.paid;
-
-        // The following checks are taking place:
-        // 1. if paid, create new payment request.
-        // 2. else if approved, send it (59 out of 100 pass with 2/3, 3/5, etc.)
-        // 3. else if grant manager add approvals,
-        // 4. else revert. as a grantee is request a payout while on is currently pending.
-        if (lastPaymentPaid) {
-            // 1. If paid, create new payment request.
-            _grantees[id][grantee].payments.push(
-                Payment({ approvals: 0, amount: value, paid: false })
-            );
-
-            emit LogPaymentRequest(id, grantee, value);
-        } else if (lastPayment.approvals > 59) {
-
-            require(
-                value == lastPayment.amount,
-                "payout::Invalid Argument. Value does not match lastPayment.amount."
-            );
-
-            // 2. else if approved, send it (59 out of 100 pass with 2/3, 3/5, etc.)
-            address currency = _grants[id].currency;
-            if (currency == address(0)) {
-                require(
-                    // solium-disable-next-line security/no-send
-                    address(uint160(grantee)).send(value),
-                    "payout::Transfer Error. Unable to send value to Grantee."
-                );
-            } else {
-                require(
-                    IERC20(currency)
-                        .transfer(grantee, value),
-                    "signal::Transfer Error. ERC20 token transfer failed."
-                );
-            }
-
-            emit LogPayment(id, grantee, value);
-        } else if (_grantManagers[id][msg.sender].isGrantManager) {
-            // 3. else if grant manager add approvals,
-            // TODO: stop from GM from approving twice.
-            uint8 approvals;
-            emit LogAddPaymentApprovals(id, grantee, value, approvals);
-        } else {
-            // 4. else revert.
-            revert("payout::Status Error. Cannot request a new payment while a payment is pending.");
-        }
-
-        return _grants[id].totalFunded
-            .sub(_grants[id].totalPayed)
-            .sub(_grants[id].totalRefunded);
+        return totalFunding
+            .sub(totalPayed)
+            .sub(totalRefunded);
     }
 
     /**
      * @dev Refund a grantor.
-     * @param id GUID for the grant to refund.
-     * @param grantor Recipient of refund.
+     * @param donor Recipient of refund.
      * @param value Amount in WEI or GRAINS to fund.
      * @return True if successful, otherwise false.
      */
-    function refund(bytes32 id, address grantor, uint256 value)
+    function refund(address donor, uint256 value)
         public
         returns (uint256 balance)
     {
-        return _grants[id].totalFunded
-            .sub(_grants[id].totalPayed)
-            .sub(_grants[id].totalRefunded);
+        // Overloaded function. Manager calling approves a refund,
+        // Donor calling withdraws refund.
+        if (isManager(msg.sender)) {
+            approveRefund(donor, value);
+        } else {
+            withdrawRefund(donor, value);
+        }
+
+        return totalFunding
+            .sub(totalPayed)
+            .sub(totalRefunded);
     }
 
     /**
@@ -387,23 +354,21 @@ contract Grant is FundThreshold, ISignal {
      * @param value Number of signals denoted in Token GRAINs or WEI.
      * @return True if successful, otherwise false.
      */
-    function signal(bytes32 id, uint256 value)
+    function signal(uint256 value)
         external
         payable
         returns (bool)
     {
 
         require(
-            _grants[id].grantStatus == GrantStatus.SIGNAL,
-            "signal::Status Error. Must be GrantStatus.SIGNAL to signal."
+            grantStatus == GrantStatus.INIT,
+            "signal::Status Error. Must be GrantStatus.INIT to signal."
         );
 
-        address token = _grants[id].currency;
+        emit LogSignal(msg.sender, currency, value);
 
-        emit LogSignal(id, msg.sender, token, value);
-
-        // Prove signaler has control of tokens.
-        if (token == address(0)) {
+        // Prove signaler has control of funds.
+        if (currency == address(0)) {
             require(
                 msg.value == value,
                 "signal::Invalid Argument. value must match msg.value."
@@ -433,25 +398,154 @@ contract Grant is FundThreshold, ISignal {
         return true;
     }
 
-    /**
-     * @dev End signaling and move to next GrantStatus.
-     * @param id The GUID of the grant to end signaling for.
-     */
-    function endSignaling(bytes32 id)
-        public
-        isGrantee(id)
-        returns (bool)
+
+    /*----------  Private Methods  ----------*/
+
+    function fundWithEther(uint256 value, uint256 change)
+        private
     {
         require(
-            _grants[id].grantStatus == GrantStatus.SIGNAL,
-            "endSignaling::Status Error. Must be GrantStatus.SIGNAL to end signaling."
+            msg.value == value,
+            "fundWithEther::Invalid Argument. value must equal msg.value. Consider using the fallback function for Ether donations."
         );
 
-        _grants[id].grantStatus = GrantStatus.FUND;
+        require(
+            msg.value > 0,
+            "fundWithEther::Invalid Value. msg.value be greater than 0."
+        );
 
-        emit LogStatusChange(id, GrantStatus.FUND);
-
-        return true;
+        // Send change as refund.
+        if (change > 0) {
+            require(
+                // solium-disable-next-line security/no-send
+                msg.sender.send(change),
+                "fundWithEther::Transfer Error. Unable to send change back to sender."
+            );
+        }
     }
 
+    function fundWithToken(uint256 value, uint256 change)
+        private
+    {
+        // Subtract change before transferring to grant contract.
+        uint256 netValue = value.sub(change);
+        require(
+            IERC20(currency)
+                .transferFrom(msg.sender, address(this), netValue),
+            "fund::Transfer Error. ERC20 token transferFrom failed."
+        );
+    }
+
+    function withdrawPayout(address grantee, uint256 value)
+        private
+    {
+        require(
+            msg.sender == grantee,
+            "withdrawPayout::Invalid Argument. grantee must match msg.sender."
+        );
+
+        // Update state.
+        totalPayed = totalPayed.add(value);
+        grantees[grantee].payoutApproved = 0;
+        grantees[grantee].totalPayed = grantees[grantee].totalPayed.add(value);
+
+        // Send funds.
+        if (currency == address(0)) {
+            require(
+                // solium-disable-next-line security/no-send
+                msg.sender.send(value),
+                "withdrawPayout::Transfer Error. Unable to send value to Grantee."
+            );
+        } else {
+            require(
+                IERC20(currency)
+                    .transfer(grantee, value),
+                "withdrawPayout::Transfer Error. ERC20 token transfer failed."
+            );
+        }
+
+        emit LogPayment(grantee, value);
+
+    }
+
+    function approvePayout(address grantee, uint256 value)
+        private
+    {
+
+        uint256 remainingAllocation = grantees[grantee].targetFunding
+            .sub(grantees[grantee].totalPayed)
+            .sub(grantees[grantee].payoutApproved);
+
+        require(
+            remainingAllocation >= value,
+            "approvePayout::Invalid Argument. value cannot exceed Grantee's remaining allocation."
+        );
+
+        grantees[grantee].payoutApproved = grantees[grantee]
+            .payoutApproved.add(value);
+
+        emit LogPaymentApproval(grantee, value);
+    }
+
+    function withdrawRefund(address donor, uint256 value)
+        private
+    {
+        require(
+            msg.sender == donor,
+            "withdrawRefund::Invalid Argument. donor must match msg.sender."
+        );
+
+        // Update state.
+        totalRefunded = totalRefunded.add(value);
+        donors[donor].refundApproved = 0;
+        donors[donor].refunded = donors[donor].refunded.add(value);
+
+        // Send funds.
+        if (currency == address(0)) {
+            require(
+                // solium-disable-next-line security/no-send
+                msg.sender.send(value),
+                "withdrawRefund::Transfer Error. Unable to send value to Donor."
+            );
+        } else {
+            require(
+                IERC20(currency)
+                    .transfer(donor, value),
+                "withdrawRefund::Transfer Error. ERC20 token transfer failed."
+            );
+        }
+
+        emit LogRefund(donor, value);
+
+    }
+
+    function approveRefund(address donor, uint256 value)
+        private
+    {
+
+        uint256 remainingAllocation = donors[donor].funded
+            .sub(donors[donor].refunded)
+            .sub(donors[donor].refundApproved);
+
+        require(
+            remainingAllocation >= value,
+            "approvePayout::Invalid Argument. value cannot exceed Donor's remaining allocation."
+        );
+
+        donors[donor].refundApproved = donors[donor]
+            .refundApproved.add(value);
+
+        emit LogRefundApproval(donor, value);
+    }
+
+
+
+    /*----------  Fallback  ----------*/
+
+    function ()
+        public
+        payable
+    {
+        fund(msg.value);
+    }
 }

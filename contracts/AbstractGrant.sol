@@ -45,13 +45,15 @@ contract AbstractGrant {
     }
 
     struct Grantee {
-        uint256 targetFunding; // Funding amount targeted for Grantee.
-        uint256 totalPayed;    // Cumulative funding received by Grantee.
+        uint256 targetFunding;   // Funding amount targeted for Grantee.
+        uint256 totalPayed;      // Cumulative funding received by Grantee.
+        uint256 payoutApproved;  // Pending payout approved by Manager.
     }
 
     struct Donor {
-        uint256 funded;   // Total amount funded.
-        uint256 refunded; // Cumulative amount refunded.
+        uint256 funded;          // Total amount funded.
+        uint256 refunded;        // Cumulative amount refunded.
+        uint256 refundApproved;  // Pending refund approved by Manager.
     }
 
 
@@ -85,11 +87,18 @@ contract AbstractGrant {
     event LogPayment(address indexed grantee, uint256 value);
 
     /**
-     * @dev Grantee requesting a payment.
+     * @dev Manager approving a payment.
      * @param grantee Address receiving payment.
      * @param value Amount in WEI or GRAINS refunded.
      */
-    event LogPaymentRequest(address indexed grantee, uint256 value);
+    event LogPaymentApproval(address indexed grantee, uint256 value);
+
+    /**
+     * @dev Manager approving a refund.
+     * @param donor Address receiving refund.
+     * @param value Amount in WEI or GRAINS refunded.
+     */
+    event LogRefundApproval(address indexed donor, uint256 value);
 
 
     /*----------  Methods  ----------*/
