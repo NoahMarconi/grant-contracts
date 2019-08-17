@@ -10,18 +10,18 @@ contract AbstractGrant {
 
     /*----------  Globals  ----------*/
 
-    address manager;                      // Multisig or EOA address to manage grant.
-    address currency;                     // (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
-    uint256 targetFunding;                // (Optional) Funding threshold required to release funds.
-    uint256 totalFunding;                 // Cumulative funding donated by donors.
-    uint256 totalPayed;                   // Cumulative funding payed to grantees.
-    uint256 totalRefunded;                // Cumulative funding refunded to grantors.
-    uint256 fundingExpiration;            // (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
-    uint256 contractExpiration;           // (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
-    uint256 refundCheckpoint;             // Balance when donor initiated refund begins. Calculate % of funds donor may refund themself.
-    GrantStatus grantStatus;              // Current GrantStatus.
-    mapping(address => Grantee) grantees; // Grant recipients by address.
-    mapping(address => Donor) donors;     // Donors by address.
+    address public manager;                      // Multisig or EOA address to manage grant.
+    address public currency;                     // (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
+    uint256 public targetFunding;                // (Optional) Funding threshold required to release funds.
+    uint256 public totalFunding;                 // Cumulative funding donated by donors.
+    uint256 public totalPayed;                   // Cumulative funding payed to grantees.
+    uint256 public totalRefunded;                // Cumulative funding refunded to grantors.
+    uint256 public fundingExpiration;            // (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
+    uint256 public contractExpiration;           // (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
+    uint256 public refundCheckpoint;             // Balance when donor initiated refund begins. Calculate % of funds donor may refund themself.
+    GrantStatus public grantStatus;              // Current GrantStatus.
+    mapping(address => Grantee) grantees;        // Grant recipients by address.
+    mapping(address => Donor) donors;            // Donors by address.
 
     /*----------  Types  ----------*/
 

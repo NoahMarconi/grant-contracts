@@ -46,6 +46,7 @@ Stretch Goal:
   - [ ] what are all the interfaces between grantees / managers / grants?
 
 TODO:
+- [ ] Validate targeted funding sums to grantee allocations.
 - [ ] partial refunds by tracking donations
 - [ ] auto refund if expiration and target not reached
 - [x] use counter for ID

@@ -3,8 +3,10 @@ import GrantToken from "../build/GrantToken.json";
 import chai from 'chai';
 import * as waffle from "ethereum-waffle";
 import { Contract, Wallet, constants } from "ethers";
+import { BigNumber } from "ethers/utils/bignumber";
 import { Web3Provider, Provider } from "ethers/providers";
 import { bigNumberify, solidityKeccak256, id } from "ethers/utils";
+import { AddressZero } from "ethers/constants";
 
 
 chai.use(waffle.solidity);
@@ -27,7 +29,7 @@ describe("Grant", () => {
     const grant: Contract = await waffle.deployContract(
       granteeWallet,
       Grant,
-      [[granteeWallet.address], [1000], managerWallet, token.address, 10000, currentTime + 86400, currentTime + (86400 * 2)],
+      [[granteeWallet.address], [1000], managerWallet.address, token.address, 10000, currentTime + 86400, currentTime + (86400 * 2)],
       { gasLimit: 6e6 }
     );
 
@@ -46,77 +48,76 @@ describe("Grant", () => {
       granteeWallet,
       donorWallet,
       managerWallet,
+      fundingExpiration: currentTime + 86400,
+      contractExpiration: currentTime + (86400 * 2),
       provider
     };
   }
 
 
   describe("Create Grant", () => {
-    let id: string;
-    let receipt: any;
-    let grantRes: any;
-    let granteeAddress: string;
-    let grantorAddress: string;
-    let managerAddress: string;
+    let _granteeAddress: string;
+    let _grantorAddress: string;
+    let _managerAddress: string;
+    let _fundingExpiration: BigNumber;
+    let _contractExpiration: BigNumber;
     let _grant: Contract;
+    let _token: Contract;
 
     describe("When created", () => {
       before(async () => {
-        const { grant, granteeWallet, donorWallet, managerWallet, provider } = await waffle.loadFixture(fixture);
-        granteeAddress = granteeWallet.address;
-        grantorAddress = donorWallet.address;
-        managerAddress = managerWallet.address;
-        console.log("grant");
-        console.log(grant);
+        const {
+          grant,
+          token,
+          granteeWallet,
+          donorWallet,
+          managerWallet,
+          fundingExpiration,
+          contractExpiration
+        } = await waffle.loadFixture(fixture);
+        _granteeAddress = granteeWallet.address;
+        _grantorAddress = donorWallet.address;
+        _managerAddress = managerWallet.address;
+        _fundingExpiration = fundingExpiration;
+        _contractExpiration = contractExpiration;
+        _grant = grant;
+        _token = token;
       });
       
-      // it("should persist the grant's details", async () => {
-      //   const {
-      //     totalGrantees,
-      //     totalGrantManagers,
-      //     currency,
-      //     targetFunding,
-      //     totalFunded,
-      //     totalPayed,
-      //     fundingExpiration,
-      //     executionExpiration,
-      //     grantType,
-      //     grantStatus,
-      //     extraData
-      //   } = grantRes;
+      it("should persist the correct overall funding target", async () => {
+        const targetFunding = await _grant.targetFunding();
+        expect(targetFunding).to.eq(10000);
+      });
 
-      //   expect(totalGrantees).to.eq(1)
-      //   expect(totalGrantManagers).to.eq(1)
-      //   expect(currency).to.eq(constants.AddressZero);
-      //   expect(targetFunding).to.eq(1000);
-      //   expect(totalFunded).to.eq(0);
-      //   expect(totalPayed).to.eq(0);
-      //   expect(fundingExpiration).to.eq(0);
-      //   expect(executionExpiration).to.eq(0);
-      //   expect(grantType).to.eq(GrantType.FUND_THRESHOLD);
-      //   expect(grantStatus).to.eq(GrantStatus.SIGNAL);
-      //   expect(extraData).to.eq("0x00");
-      // });
+      it("should persist the correct grantee funding target", async () => {
+        const grantee = await _grant.getGrantee(_granteeAddress);        
+        expect(grantee.targetFunding).to.eq(1000);
+      });
 
-      // it("should persist the grantee details", async () => {
-      //   const granteeRes = await _grant.getGrantee(id, granteeAddress);
-      //   const { grantee, isGrantee, allocation, received } = granteeRes;
-        
-      //   expect(isGrantee).to.be.true;
-      //   expect(grantee).to.eq(granteeAddress);
-      //   expect(allocation).to.eq(100);
-      //   expect(received).to.eq(0);
-      // });
+      it("should persist the correct manager", async () => {
+        const manager = await _grant.manager();
+        expect(manager).to.eq(_managerAddress);
+      });
 
-      // it("should persist the grantManager details", async () => {
-      //   const grantManagerRes = await _grant.getGrantManager(id, managerAddress);
-      //   const { grantManager, isGrantManager, weight } = grantManagerRes;
-        
-      //   expect(isGrantManager).to.be.true;
-      //   expect(grantManager).to.eq(managerAddress);
-      //   expect(weight).to.eq(100);
-      // });
-  
+      it("should persist the correct currency", async () => {
+        const currency = await _grant.currency();
+        expect(currency).to.eq(_token.address);
+      });
+
+      it("should persist the correct fundingExpiration", async () => {
+        const fundingExpiration = await _grant.fundingExpiration();
+        expect(fundingExpiration).to.eq(_fundingExpiration);
+      });
+
+      it("should persist the correct contractExpiration", async () => {
+        const contractExpiration = await _grant.contractExpiration();
+        expect(contractExpiration).to.eq(_contractExpiration);
+      });
+
+      it("should persist the correct grantStatus", async () => {
+        const grantStatus = await _grant.grantStatus();
+        expect(grantStatus).to.eq(GrantStatus.INIT);
+      });
     });
 
   });
