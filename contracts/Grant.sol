@@ -16,36 +16,6 @@ contract Grant is AbstractGrant, ISignal {
     using SafeMath for uint256;
 
 
-    /*----------  Modifiers  ----------*/
-
-    modifier onlyGrantee() {
-        require(
-            isGrantee(msg.sender),
-            "isGrantee::Invalid Sender. Sender is not a grantee for this grant."
-        );
-
-        _;
-    }
-
-    modifier onlyDonor() {
-        require(
-            isDonor(msg.sender),
-            "isDonor::Invalid Sender. Sender is not a donor for this grant."
-        );
-
-        _;
-    }
-
-    modifier onlyManager() {
-        require(
-            isManager(msg.sender),
-            "onlyManager::Invalid Sender. Sender is not the manager of this grant."
-        );
-
-        _;
-    }
-
-
     /*----------  Constructor  ----------*/
 
     /**
