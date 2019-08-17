@@ -20,6 +20,7 @@ contract AbstractGrant {
     uint256 totalRefunded;                // Cumulative funding refunded to grantors.
     uint256 fundingExpiration;            // (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
     uint256 contractExpiration;           // (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
+    uint256 refundCheckpoint;             // Balance when donor initiated refund begins. Calculate % of funds donor may refund themself.
     GrantStatus grantStatus;              // Current GrantStatus.
     mapping(address => Grantee) grantees; // Grant recipients by address.
     mapping(address => Donor) donors;     // Donors by address.
@@ -41,7 +42,7 @@ contract AbstractGrant {
     enum GrantStatus {
         INIT,    // Contract Deployment.
         SUCCESS, // Grant successfully funded.
-        DONE     // Grant complete and funds dispersed.
+        DONE     // Grant complete and funds dispersed, or grant cancelled.
     }
 
     struct Grantee {

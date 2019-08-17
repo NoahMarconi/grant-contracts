@@ -30,14 +30,15 @@ Design Question:
   whether or not we can re-allocate funds between grantees, etc...
 
 Refunds:
-- [ ] Three refund operations:
-  - [ ] 1. The grant does not reach the funding goal in time.
-    - [ ] any donor can withdraw
+- [x] Three refund operations:
+  - [x] 1. The grant does not reach the funding goal in time.
+    - [x] any donor can withdraw
     - [ ] bonus for auto-withdraw
-  - [ ] 2. The grant managers decides to refund the donors.
-  - [ ] 3. The grant reaches the funding goal, but funds are still remaining after
-     - [ ] a second expiration date
+  - [x] 2. The grant managers decides to refund the donors.
+  - [x] 3. The grant reaches the funding goal, but funds are still remaining after a second expiration date
    - [ ] kill expiration on the grant contract which freezes all future payouts
+  - [ ] !!!NOTE!!! auto triggered refunding halts previously approved but never claimed payouts.
+
 
 Stretch Goal:
 - [ ] can we outsource grantees / grant manager to a separate contract?

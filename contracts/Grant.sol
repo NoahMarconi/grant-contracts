@@ -16,6 +16,11 @@ contract Grant is AbstractGrant, ISignal {
     using SafeMath for uint256;
 
 
+    /*----------  Constants  ----------*/
+
+    uint256 PRECISION_D = 10 ** 18;
+
+
     /*----------  Constructor  ----------*/
 
     /**
@@ -117,6 +122,14 @@ contract Grant is AbstractGrant, ISignal {
         returns(bool)
     {
         return manager == toCheck;
+    }
+
+    function contractBalance()
+        public
+        view
+        returns(uint256)
+    {
+        return totalFunding.sub(totalPayed).sub(totalRefunded);
     }
 
     /*----------  Public Getters  ----------*/
@@ -252,9 +265,7 @@ contract Grant is AbstractGrant, ISignal {
             withdrawPayout(grantee, value);
         }
 
-        return totalFunding
-            .sub(totalPayed)
-            .sub(totalRefunded);
+        return contractBalance();
     }
 
     /**
@@ -275,9 +286,7 @@ contract Grant is AbstractGrant, ISignal {
             withdrawRefund(donor, value);
         }
 
-        return totalFunding
-            .sub(totalPayed)
-            .sub(totalRefunded);
+        return contractBalance();
     }
 
     /**
@@ -313,9 +322,7 @@ contract Grant is AbstractGrant, ISignal {
             _grants[id].grantStatus = GrantStatus.REFUND;
             emit LogStatusChange(id, GrantStatus.REFUND);
         }
-        return _grants[id].totalFunded
-            .sub(_grants[id].totalPayed)
-            .sub(_grants[id].totalRefunded);
+        return contractBalance();
     }
 
     /**
@@ -414,6 +421,11 @@ contract Grant is AbstractGrant, ISignal {
             "withdrawPayout::Invalid Argument. grantee must match msg.sender."
         );
 
+        require(
+            grantees[grantee].payoutApproved == value,
+            "withdrawPayout::Invalid Argument. grantee payoutApproved does not match value."
+        );
+
         // Update state.
         totalPayed = totalPayed.add(value);
         grantees[grantee].payoutApproved = 0;
@@ -465,27 +477,75 @@ contract Grant is AbstractGrant, ISignal {
             "withdrawRefund::Invalid Argument. donor must match msg.sender."
         );
 
+        // Handle self initiated refund.
+        // May refund without Manager approval if:
+        //     1. Funding goal not met before fundingExpiration.
+        //     2. Funds not completely dispersed before contractExpiration.
+        //     3. Manager cancelled grant.
+        uint256 balance = contractBalance();
+        uint245 refundValue = value;
+        if (
+            // solium-disable-next-line security/no-block-members
+            (now >= fundingExpiration && totalFunding < targetFunding) ||
+            grantStatus == GrantStatus.DONE ||
+            (now >= contractExpiration && balance > 0)
+            // solium-disable-previous-line security/no-block-members
+        )
+        {
+            // Set GrantStatus to DONE to halt pending payouts.
+            if (grantStatus != GrantStatus.DONE) {
+                grantStatus = GrantStatus.DONE;
+            }
+
+            // Set balance checkpoint for self initiated refunds.
+            if (refundCheckpoint == 0) {
+                refundCheckpoint = totalRefunded;
+            }
+
+            // Calculate % of balance owned.
+            uint256 base = totalFunding
+                .sub(refundCheckpoint)
+                .mul(PRECISION_D);
+
+            uint256 numerator = donors[msg.sender].funded
+                .mul(PRECISION_D);
+
+            uint256 fundsRemaining = totalFunding
+                .sub(refundCheckpoint)
+                .sub(totalPayed);
+
+            refundValue = numerator.mul(fundsRemaining).div(base);
+
+        } else { // Handle Manager initiated refund.
+
+            require(
+                donors[donor].refundApproved == value,
+                "withdrawPayout::Invalid Argument. donor refundApproved does not match value."
+            );
+
+        }
+
         // Update state.
-        totalRefunded = totalRefunded.add(value);
+        totalRefunded = totalRefunded.add(refundValue);
         donors[donor].refundApproved = 0;
-        donors[donor].refunded = donors[donor].refunded.add(value);
+        donors[donor].refunded = donors[donor].refunded.add(refundValue);
 
         // Send funds.
         if (currency == address(0)) {
             require(
                 // solium-disable-next-line security/no-send
-                msg.sender.send(value),
-                "withdrawRefund::Transfer Error. Unable to send value to Donor."
+                msg.sender.send(refundValue),
+                "withdrawRefund::Transfer Error. Unable to send refundValue to Donor."
             );
         } else {
             require(
                 IERC20(currency)
-                    .transfer(donor, value),
+                    .transfer(donor, refundValue),
                 "withdrawRefund::Transfer Error. ERC20 token transfer failed."
             );
         }
 
-        emit LogRefund(donor, value);
+        emit LogRefund(donor, refundValue);
 
     }
 
