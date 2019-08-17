@@ -67,7 +67,6 @@ contract Grant is AbstractGrant, ISignal {
         targetFunding = _targetFunding;
         fundingExpiration = _fundingExpiration;
         contractExpiration = _contractExpiration;
-        totalGrantees = _grantees.length;
 
         // Initialize Grantees.
         address lastAddress = address(0);
@@ -233,9 +232,6 @@ contract Grant is AbstractGrant, ISignal {
         }
 
         // Record Contribution.
-        if (!isDonor(msg.sender)) {
-            totalDonors = totalDonors.add(1);
-        }
         donors[msg.sender].funded = donors[msg.sender].funded.add(value);
 
         // Update funding tally.

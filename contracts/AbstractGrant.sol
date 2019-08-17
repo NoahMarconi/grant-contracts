@@ -11,8 +11,6 @@ contract AbstractGrant {
     /*----------  Globals  ----------*/
 
     address manager;                      // Multisig or EOA address to manage grant.
-    uint256 totalDonors;                  // Cumulative number of Donors for this grant.
-    uint256 totalGrantees;                // Number of Grantees for this grant.
     address currency;                     // (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
     uint256 targetFunding;                // (Optional) Funding threshold required to release funds.
     uint256 totalFunding;                 // Cumulative funding donated by donors.

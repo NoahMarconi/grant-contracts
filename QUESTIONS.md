@@ -5,7 +5,7 @@ Questions:
 - [ ] can we reduce # of roles (grantor / grantee)
 - [ ] can we combine / reduce grant state
 - [x] do we want to store grant recipients as array or mapping
-  - [x] do we need to iterate over this in the contract logic (A: not)
+  - [x] do we need to iterate over this in the contract logic (A: no)
 - [x] can we remove "request payment"
   - [x] are we assuming that grant managers have robust offchain comm with grantees
   - [x] what if everyone is a grant manager?
