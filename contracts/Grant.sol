@@ -294,34 +294,25 @@ contract Grant is AbstractGrant, ISignal {
      * @param id GUID for the grant to refund.
      * @return True if successful, otherwise false.
      */
-    function cancelGrant(bytes32 id)
+    function cancelGrant()
         public
         returns (uint256 balance)
     {
         require(
-            _grants[id].grantStatus == GrantStatus.SIGNAL ||
-            _grants[id].grantStatus == GrantStatus.FUND ||
-            _grants[id].grantStatus == GrantStatus.PAY,
-            "cancelGrant::Status Error. Must be GrantStatus.SIGNAL, GrantStatus.FUND, or GrantStatus.PAY to cancel."
+            grantStatus == GrantStatus.SUCCESS ||
+            grantStatus == GrantStatus.INIT,
+            "cancelGrant::Status Error. Must be GrantStatus.INIT, GrantStatus.SUCCESS to cancel."
         );
-
-        bool granteeOrGrantManager = _grantees[id][msg.sender].isGrantee ||
-            _grantManagers[id][msg.sender].isGrantManager;
 
         require(
-            granteeOrGrantManager,
-            "cancelGrant::Invalid Sender. Only a Grantee or GrantManager may cancel the grant."
+            isManager(msg.sender),
+            "cancelGrant::Invalid Sender. Only a Manager may cancel the grant."
         );
 
-        // SIGNAL can simply be moved to COMPLETE.
-        // Otherwise Grantors need to be refunded.
-        if (_grants[id].grantStatus == GrantStatus.SIGNAL) {
-            _grants[id].grantStatus = GrantStatus.COMPLETE;
-            emit LogStatusChange(id, GrantStatus.COMPLETE);
-        } else {
-            _grants[id].grantStatus = GrantStatus.REFUND;
-            emit LogStatusChange(id, GrantStatus.REFUND);
-        }
+        grantStatus = GrantStatus.DONE;
+
+        emit LogStatusChange(GrantStatus.DONE);
+
         return contractBalance();
     }
 
