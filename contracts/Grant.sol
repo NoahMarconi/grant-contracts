@@ -34,8 +34,8 @@ contract Grant is AbstractGrant, ISignal {
      * @param _contractExpiration (Optional) Date after which payouts must be complete or anyone can trigger refunds.
      */
     constructor(
-        address[] _grantees,
-        uint256[] _amounts,
+        address[] memory _grantees,
+        uint256[] memory _amounts,
         address _manager,
         address _currency,
         uint256 _targetFunding,
@@ -57,7 +57,7 @@ contract Grant is AbstractGrant, ISignal {
         );
 
         require(
-            grantees.length > 0,
+            _grantees.length > 0,
             "constructor::Invalid Argument. Must have one or more grantees."
         );
 
@@ -73,7 +73,7 @@ contract Grant is AbstractGrant, ISignal {
         address lastAddress = address(0);
         for (uint256 i = 0; i < _grantees.length; i++) {
             address currentGrantee = _grantees[i];
-            address currentAmount = _amounts[i];
+            uint256 currentAmount = _amounts[i];
 
             require(
                 currentAmount > 0,
@@ -105,7 +105,7 @@ contract Grant is AbstractGrant, ISignal {
         view
         returns(bool)
     {
-        return grantees[toCheck].totalFunded > 0;
+        return grantees[toCheck].targetFunding > 0;
     }
 
     function isDonor(address toCheck)
@@ -137,8 +137,19 @@ contract Grant is AbstractGrant, ISignal {
     // TODO: are there additional getters needed?
 
     /**
+     * @dev Total funding getter.
+     * @return Cumulative funding received for this grant.
+     */
+    function getTotalFunding()
+        public
+        view
+        returns (uint256 funding)
+    {
+        return totalFunding;
+    }
+
+    /**
      * @dev Donor Getter.
-     * @param id GUID for the grant.
      * @param donor Address for the donor.
      * @return The Donor struct.
      */
@@ -160,7 +171,7 @@ contract Grant is AbstractGrant, ISignal {
         view
         returns (Grantee memory)
     {
-        return _grantees[grantee];
+        return grantees[grantee];
     }
 
     /**
@@ -188,6 +199,12 @@ contract Grant is AbstractGrant, ISignal {
         payable
         returns (uint256 balance)
     {
+
+        require(
+            donors[msg.sender].refunded == 0 &&
+            donors[msg.sender].refundApproved == 0,
+            "fund::Error. Cannot fund if previously approved for, or received, refund."
+        );
 
         require(
             grantStatus == GrantStatus.INIT,
@@ -225,7 +242,7 @@ contract Grant is AbstractGrant, ISignal {
         totalFunding = newTotalFunding;
 
         // Log events.
-        emit LogFunding(id, msg.sender, value);
+        emit LogFunding(msg.sender, value);
 
         if (targetFunding == newTotalFunding) {
             grantStatus = GrantStatus.SUCCESS;
@@ -237,7 +254,6 @@ contract Grant is AbstractGrant, ISignal {
 
     /**
      * @dev Pay a grantee.
-     * @param id GUID for the grant to fund.
      * @param grantee Recipient of payment.
      * @param value Amount in WEI or GRAINS to fund.
      * @return Remaining funding available in this grant.
@@ -271,19 +287,18 @@ contract Grant is AbstractGrant, ISignal {
     /**
      * @dev Refund a grantor.
      * @param donor Recipient of refund.
-     * @param value Amount in WEI or GRAINS to fund.
      * @return True if successful, otherwise false.
      */
-    function refund(address donor, uint256 value)
+    function refund(address donor)
         public
         returns (uint256 balance)
     {
         // Overloaded function. Manager calling approves a refund,
         // Donor calling withdraws refund.
         if (isManager(msg.sender)) {
-            approveRefund(donor, value);
+            approveRefund(donor);
         } else {
-            withdrawRefund(donor, value);
+            withdrawRefund(donor);
         }
 
         return contractBalance();
@@ -291,7 +306,6 @@ contract Grant is AbstractGrant, ISignal {
 
     /**
      * @dev Cancel grant and enable refunds.
-     * @param id GUID for the grant to refund.
      * @return True if successful, otherwise false.
      */
     function cancelGrant()
@@ -318,7 +332,6 @@ contract Grant is AbstractGrant, ISignal {
 
     /**
      * @dev Voting Signal Method.
-     * @param id The ID of the grant to signal in favor for.
      * @param value Number of signals denoted in Token GRAINs or WEI.
      * @return True if successful, otherwise false.
      */
@@ -350,14 +363,14 @@ contract Grant is AbstractGrant, ISignal {
         } else {
             // Transfer to this contract.
             require(
-                IERC20(token)
+                IERC20(currency)
                     .transferFrom(msg.sender, address(this), value),
                 "signal::Transfer Error. ERC20 token transferFrom failed."
             );
 
             // Transfer back to sender.
             require(
-                IERC20(token)
+                IERC20(currency)
                     .transfer(msg.sender, value),
                 "signal::Transfer Error. ERC20 token transfer failed."
             );
@@ -460,7 +473,7 @@ contract Grant is AbstractGrant, ISignal {
         emit LogPaymentApproval(grantee, value);
     }
 
-    function withdrawRefund(address donor, uint256 value)
+    function withdrawRefund(address donor)
         private
     {
         require(
@@ -474,7 +487,7 @@ contract Grant is AbstractGrant, ISignal {
         //     2. Funds not completely dispersed before contractExpiration.
         //     3. Manager cancelled grant.
         uint256 balance = contractBalance();
-        uint245 refundValue = value;
+        uint256 refundValue = donors[msg.sender].funded;
         if (
             // solium-disable-next-line security/no-block-members
             (now >= fundingExpiration && totalFunding < targetFunding) ||
@@ -510,7 +523,7 @@ contract Grant is AbstractGrant, ISignal {
         } else { // Handle Manager initiated refund.
 
             require(
-                donors[donor].refundApproved == value,
+                donors[donor].refundApproved == refundValue,
                 "withdrawPayout::Invalid Argument. donor refundApproved does not match value."
             );
 
@@ -540,23 +553,18 @@ contract Grant is AbstractGrant, ISignal {
 
     }
 
-    function approveRefund(address donor, uint256 value)
+    function approveRefund(address donor)
         private
     {
 
-        uint256 remainingAllocation = donors[donor].funded
-            .sub(donors[donor].refunded)
-            .sub(donors[donor].refundApproved);
-
         require(
-            remainingAllocation >= value,
-            "approvePayout::Invalid Argument. value cannot exceed Donor's remaining allocation."
+            donors[donor].refunded == 0,
+            "approveRefund::Invalid Argument. donor has already received refund."
         );
 
-        donors[donor].refundApproved = donors[donor]
-            .refundApproved.add(value);
+        donors[donor].refundApproved = donors[donor].funded;
 
-        emit LogRefundApproval(donor, value);
+        emit LogRefundApproval(donor, donors[donor].refundApproved);
     }
 
 
@@ -564,7 +572,7 @@ contract Grant is AbstractGrant, ISignal {
     /*----------  Fallback  ----------*/
 
     function ()
-        public
+        external
         payable
     {
         fund(msg.value);

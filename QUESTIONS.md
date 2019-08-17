@@ -65,15 +65,15 @@ Bonus:
 https://github.com/christianlundkvist/simple-multisig/blob/720386bc141b8f5e5d4dc57519e4e6c3e43b4911/contracts/SimpleMultiSig.sol#L27
 
 
-FUND_THRESHOLD, // Funds unlocked if threshold met.
-- time based expiration
-FUNDER_VOTE,    // Funds unlocked if funders approve.
-- funders become grant managers
-- get votes based on donations
-MANAGED,        // Funds unlocked by grant_managers.
-- pre-selected grant managers
-OPAQUE          // Other offchain method.
-- ?
+~FUND_THRESHOLD, // Funds unlocked if threshold met.~
+- ~time based expiration~
+~FUNDER_VOTE,    // Funds unlocked if funders approve.~
+- ~funders become grant managers~
+- ~get votes based on donations~
+MANAGED,        // Funds unlocked by grant_managers.~
+- ~pre-selected grant managers~
+~OPAQUE          // Other offchain method.~
+- ~?~
 
 
 - [ ] Reject eth if currency is token.

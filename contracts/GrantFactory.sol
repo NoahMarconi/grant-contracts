@@ -41,17 +41,17 @@ contract GrantFactory {
      * @return GUID for this grant.
      */
     function create(
-        address[] _grantees,
-        uint256[] _amounts,
+        address[] memory _grantees,
+        uint256[] memory _amounts,
         address _manager,
         address _currency,
         uint256 _targetFunding,
         uint256 _fundingExpiration,
         uint256 _contractExpiration,
-        bytes memory extraData // implementation detail
+        bytes memory _extraData // implementation detail
     )
         public
-        returns (uint256 id)
+        returns (uint256)
     {
         Grant grant = new Grant(
             _grantees,
