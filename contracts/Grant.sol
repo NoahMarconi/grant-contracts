@@ -357,6 +357,11 @@ contract Grant is AbstractGrant, ISignal {
                 "signal::Transfer Error. Unable to send msg.value back to sender."
             );
         } else {
+            require(
+                msg.value == 0,
+                "signal::Currency Error. Cannot send Ether to a token funded grant."
+            );
+
             // Transfer to this contract.
             require(
                 IERC20(currency)

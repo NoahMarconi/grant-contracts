@@ -66,12 +66,12 @@ contract GrantFactory {
         // Store grant info.
         uint256 grantId = id;
         address grantAddress = address(grant);
-        grants[id] = grantAddress;
+        grants[grantId] = grantAddress;
 
         // Increment id counter.
         id = id.add(1);
 
-        emit LogNewGrant(id, grantAddress);
+        emit LogNewGrant(grantId, grantAddress);
 
         return grantId;
     }
