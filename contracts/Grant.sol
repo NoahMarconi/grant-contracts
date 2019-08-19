@@ -45,6 +45,11 @@ contract Grant is AbstractGrant, ISignal {
         public
     {
         require(
+            _fundingExpiration < _contractExpiration,
+            "constructor::Invalid Argument. _fundingExpiration must be less than _contractExpiration."
+        );
+
+        require(
         // solium-disable-next-line security/no-block-members
             _fundingExpiration == 0 || _fundingExpiration > now,
             "constructor::Invalid Argument. _fundingExpiration must be 0 or greater than current date."
@@ -232,13 +237,15 @@ contract Grant is AbstractGrant, ISignal {
         }
 
         // Record Contribution.
-        donors[msg.sender].funded = donors[msg.sender].funded.add(value);
+        donors[msg.sender].funded = donors[msg.sender].funded
+            .add(value)
+            .sub(change); // Account for change from over funding.
 
         // Update funding tally.
         totalFunding = newTotalFunding;
 
         // Log events.
-        emit LogFunding(msg.sender, value);
+        emit LogFunding(msg.sender, value.sub(change));
 
         if (targetFunding == newTotalFunding) {
             grantStatus = GrantStatus.SUCCESS;
@@ -266,7 +273,7 @@ contract Grant is AbstractGrant, ISignal {
 
         require(
             isManager(msg.sender) || (isGrantee(msg.sender) && msg.sender == grantee),
-            "payout::Invalid Argument. If not a Manger, msg.sender must match grantee argument."
+            "payout::Invalid Argument. If not a Manger, msg.sender must be a Grantee match grantee argument."
         );
 
         // Overloaded function. Manager calling approves a payout,
@@ -289,6 +296,12 @@ contract Grant is AbstractGrant, ISignal {
         public
         returns (uint256 balance)
     {
+
+        require(
+            isManager(msg.sender) || (isDonor(msg.sender) && msg.sender == donor),
+            "refund::Invalid Argument. If not a Manger, msg.sender must be a Donor match donor argument."
+        );
+
         // Overloaded function. Manager calling approves a refund,
         // Donor calling withdraws refund.
         if (isManager(msg.sender)) {
@@ -409,6 +422,11 @@ contract Grant is AbstractGrant, ISignal {
     function fundWithToken(uint256 value, uint256 change)
         private
     {
+        require(
+            msg.value == 0,
+            "fundWithToken::Currency Error. Cannot send Ether to a token funded grant."
+        );
+
         // Subtract change before transferring to grant contract.
         uint256 netValue = value.sub(change);
         require(
@@ -488,7 +506,7 @@ contract Grant is AbstractGrant, ISignal {
         //     2. Funds not completely dispersed before contractExpiration.
         //     3. Manager cancelled grant.
         uint256 balance = contractBalance();
-        uint256 refundValue = donors[msg.sender].funded;
+        uint256 refundValue;
         if (
             // solium-disable-next-line security/no-block-members
             (now >= fundingExpiration && totalFunding < targetFunding) ||
@@ -507,26 +525,13 @@ contract Grant is AbstractGrant, ISignal {
                 refundCheckpoint = totalRefunded;
             }
 
-            // Calculate % of balance owned.
-            uint256 base = totalFunding
-                .sub(refundCheckpoint)
-                .mul(PRECISION_D);
-
-            uint256 numerator = donors[msg.sender].funded
-                .mul(PRECISION_D);
-
-            uint256 fundsRemaining = totalFunding
-                .sub(refundCheckpoint)
-                .sub(totalPayed);
-
-            refundValue = numerator.mul(fundsRemaining).div(base);
+            refundValue = getRefundAmount(refundCheckpoint);
 
         } else { // Handle Manager initiated refund.
 
-            require(
-                donors[donor].refundApproved == refundValue,
-                "withdrawPayout::Invalid Argument. donor refundApproved does not match value."
-            );
+            refundValue = getRefundAmount(totalRefunded);
+
+            assert(donors[donor].refundApproved >= refundValue);
 
         }
 
@@ -568,6 +573,29 @@ contract Grant is AbstractGrant, ISignal {
         emit LogRefundApproval(donor, donors[donor].refundApproved);
     }
 
+    function getRefundAmount(uint256 checkpoint)
+        private
+        view
+        returns(uint256)
+    {
+        // Calculate % of balance owned.
+        uint256 base = totalFunding
+            .sub(checkpoint)
+            .mul(PRECISION_D);
+
+        uint256 numerator = donors[msg.sender].funded
+            .mul(PRECISION_D);
+
+        uint256 fundsRemaining = totalFunding
+            .sub(checkpoint)
+            .sub(totalPayed);
+
+        uint256 refundValue = numerator
+            .mul(fundsRemaining)
+            .div(base);
+
+        return refundValue;
+    }
 
 
     /*----------  Fallback  ----------*/
