@@ -531,7 +531,10 @@ contract Grant is AbstractGrant, ISignal {
 
             refundValue = getRefundAmount(totalRefunded);
 
-            assert(donors[donor].refundApproved >= refundValue);
+            require(
+                donors[donor].refundApproved >= refundValue,
+                "withdrawRefund::Error. donor not approved by Manager for refund."
+            );
 
         }
 
