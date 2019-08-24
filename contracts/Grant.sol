@@ -239,7 +239,7 @@ contract Grant is AbstractGrant, ISignal {
         // Record Contribution.
         donors[msg.sender].funded = donors[msg.sender].funded
             .add(value)
-            .sub(change); // Account for change from over funding.
+            .sub(change); // Account for change from over-funding.
 
         // Update funding tally.
         totalFunding = newTotalFunding;
@@ -284,11 +284,14 @@ contract Grant is AbstractGrant, ISignal {
             withdrawPayout(grantee, value);
         }
 
+        // Remove any refund checkpoint.
+        refundCheckpoint = 0;
+
         return contractBalance();
     }
 
     /**
-     * @dev Refund a grantor.
+     * @dev Refund a donor.
      * @param donor Recipient of refund.
      * @return True if successful, otherwise false.
      */
@@ -324,7 +327,7 @@ contract Grant is AbstractGrant, ISignal {
         require(
             grantStatus == GrantStatus.SUCCESS ||
             grantStatus == GrantStatus.INIT,
-            "cancelGrant::Status Error. Must be GrantStatus.INIT, GrantStatus.SUCCESS to cancel."
+            "cancelGrant::Status Error. Must be GrantStatus.INIT or GrantStatus.SUCCESS to cancel."
         );
 
         require(
@@ -501,12 +504,12 @@ contract Grant is AbstractGrant, ISignal {
         );
 
         // Handle self initiated refund.
-        // May refund without Manager approval if:
+        // A donor may refund without Manager approval if:
         //     1. Funding goal not met before fundingExpiration.
         //     2. Funds not completely dispersed before contractExpiration.
         //     3. Manager cancelled grant.
         uint256 balance = contractBalance();
-        uint256 refundValue;
+        uint256 refundValue = getRefundAmount();
         if (
             // solium-disable-next-line security/no-block-members
             (now >= fundingExpiration && totalFunding < targetFunding) ||
@@ -520,16 +523,7 @@ contract Grant is AbstractGrant, ISignal {
                 grantStatus = GrantStatus.DONE;
             }
 
-            // Set balance checkpoint for self initiated refunds.
-            if (refundCheckpoint == 0) {
-                refundCheckpoint = totalRefunded;
-            }
-
-            refundValue = getRefundAmount(refundCheckpoint);
-
         } else { // Handle Manager initiated refund.
-
-            refundValue = getRefundAmount(totalRefunded);
 
             require(
                 donors[donor].refundApproved >= refundValue,
@@ -576,21 +570,36 @@ contract Grant is AbstractGrant, ISignal {
         emit LogRefundApproval(donor, donors[donor].refundApproved);
     }
 
-    function getRefundAmount(uint256 checkpoint)
+    /**
+     * @dev Calculates refund amount owed. Checkpoints total refunded after each
+     *      Grantee payout to ensure refunds are based on contribution %
+     *      of remaining funds.
+     * @return refund amount for Donor.
+     */
+    function getRefundAmount()
         private
-        view
         returns(uint256)
     {
+        // Set balance checkpoint for sequential refunds.
+        if (refundCheckpoint == 0) {
+            refundCheckpoint = totalRefunded;
+        }
+
+        // let d = donor funded
+        // let t = total funding
+        // let r = total refund checkpoint
+        // let p = total payed out
+        // (d * 10^18) / ((t-r)*10^18) * (t - r - p ) / 1
         // Calculate % of balance owned.
         uint256 base = totalFunding
-            .sub(checkpoint)
+            .sub(refundCheckpoint)
             .mul(PRECISION_D);
 
         uint256 numerator = donors[msg.sender].funded
             .mul(PRECISION_D);
 
         uint256 fundsRemaining = totalFunding
-            .sub(checkpoint)
+            .sub(refundCheckpoint)
             .sub(totalPayed);
 
         uint256 refundValue = numerator
