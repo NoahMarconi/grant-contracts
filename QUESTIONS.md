@@ -37,7 +37,7 @@ add canFund function
   - [ ] DAO as manager (delegate management but maintain cancel control for example)
 - [x] can we remove Payments[] by having a "requesting" global state
   - [x] grant managers approve / vote on the requested funds
-  - [na] possibly use timestamp to avoid explicit states
+  - [] ~~possibly use timestamp to avoid explicit states~~
   - [ ] if expires then can propose again
   - [ ] NEW: one at a time or not?
 - [x] can we remove multiple grant managers / voting / m-of-n and replace w/ msig?

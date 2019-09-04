@@ -108,6 +108,13 @@ contract Grant is AbstractGrant, ISignal {
 
     }
 
+    function contractBalance()
+        public
+        view
+        returns(uint256)
+    {
+        return totalFunding.sub(totalPayed).sub(totalRefunded);
+    }
 
     /*----------  Public Helpers  ----------*/
 
