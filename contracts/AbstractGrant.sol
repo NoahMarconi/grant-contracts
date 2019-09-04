@@ -12,36 +12,18 @@ contract AbstractGrant {
 
     address public manager;                      // Multisig or EOA address to manage grant.
     address public currency;                     // (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
-    uint256 public targetFunding;                // (Optional) Funding threshold required to release funds.
+    uint256 public targetFunding;                // (Optional) Funding threshold required to begin releasing funds.
     uint256 public totalFunding;                 // Cumulative funding donated by donors.
     uint256 public totalPayed;                   // Cumulative funding payed to grantees.
-    uint256 public totalRefunded;                // Cumulative funding refunded to grantors.
+    uint256 public totalRefunded;                // Cumulative funding refunded to donors.
+    uint256 public pendingPayments;              //
     uint256 public fundingExpiration;            // (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
     uint256 public contractExpiration;           // (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
     uint256 public refundCheckpoint;             // Balance when donor initiated refund begins. Calculate % of funds donor may refund themself.
-    GrantStatus public grantStatus;              // Current GrantStatus.
-    mapping(address => Grantee) grantees;        // Grant recipients by address.
-    mapping(address => Donor) donors;            // Donors by address.
+    mapping(address => Grantee) public grantees; // Grant recipients by address.
+    mapping(address => Donor) public donors;     // Donors by address.
 
     /*----------  Types  ----------*/
-
-
-    // TODO: Confirm GrantStatus not needed for FUNDRAISING as it can be inferred.
-
-    // 1. INIT is fine - contract deployment
-    // 2. remove SIGNAL
-    // 3. FUNDRAISING is fine - fund start timestamp passed
-    // 4. working
-    // 5. done (all refunds allowed)
-
-    // INIT -> FUNDRAISING -> SUCCESS -> DONE
-    //                     -> DONE
-
-    enum GrantStatus {
-        INIT,    // Contract Deployment.
-        SUCCESS, // Grant successfully funded.
-        DONE     // Grant complete and funds dispersed, or grant cancelled.
-    }
 
     struct Grantee {
         uint256 targetFunding;   // Funding amount targeted for Grantee.
@@ -59,10 +41,14 @@ contract AbstractGrant {
     /*----------  Events  ----------*/
 
     /**
-     * @dev Change in GrantStatus.
-     * @param grantStatus New GrantStatus.
+     * @dev Funding target reached event.
      */
-    event LogStatusChange(GrantStatus grantStatus);
+    event LogFundingComplete();
+
+    /**
+     * @dev Grant cancellation event.
+     */
+    event LogGrantCancellation();
 
     /**
      * @dev Grant received funding.
@@ -111,6 +97,11 @@ contract AbstractGrant {
         view
         returns (uint256 funding);
 
+    function getAvailableBalance()
+        public
+        view
+        returns(uint256 balance);
+
     /**
      * @dev Fund a grant proposal.
      * @param value Amount in WEI or GRAINS to fund.
@@ -136,12 +127,6 @@ contract AbstractGrant {
      * @param donor Recipient of refund.
      * @return Remaining funding available in this grant.
      */
-
-    // TODO: MUST BE DONE
-    // any donor can receive up to their maximum
-    // - their fraction of (total funding - total spent) * (donor value / total funding)
-    // - only allow refunds in full
-    // - check that donor refund = 0
     function refund(address donor)
         public
         returns (uint256 balance);

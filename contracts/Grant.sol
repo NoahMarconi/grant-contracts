@@ -44,6 +44,8 @@ contract Grant is AbstractGrant, ISignal {
     )
         public
     {
+
+        what if 0
         require(
             _fundingExpiration < _contractExpiration,
             "constructor::Invalid Argument. _fundingExpiration must be less than _contractExpiration."
@@ -66,12 +68,18 @@ contract Grant is AbstractGrant, ISignal {
             "constructor::Invalid Argument. Must have one or more grantees."
         );
 
+        grantees length == amounts.length
+
         // Initialize globals.
         manager = _manager;
         currency = _currency;
         targetFunding = _targetFunding;
         fundingExpiration = _fundingExpiration;
         contractExpiration = _contractExpiration;
+
+
+        confirm sum of allocations matches targetFunding
+        uint256 totalFundingAmount 
 
         // Initialize Grantees.
         address lastAddress = address(0);
@@ -83,7 +91,6 @@ contract Grant is AbstractGrant, ISignal {
                 currentAmount > 0,
                 "constructor::Invalid Argument. Grantee's allocation (currentAmount) must be greater than 0."
             );
-
 
             require(
                 currentGrantee > lastAddress,
@@ -128,71 +135,24 @@ contract Grant is AbstractGrant, ISignal {
         return manager == toCheck;
     }
 
-    function contractBalance()
+    function getAvailableBalance()
         public
         view
-        returns(uint256)
+        returns(uint256 balance)
     {
-        return totalFunding.sub(totalPayed).sub(totalRefunded);
-    }
-
-    /*----------  Public Getters  ----------*/
-
-    // TODO: are there additional getters needed?
-
-    /**
-     * @dev Total funding getter.
-     * @return Cumulative funding received for this grant.
-     */
-    function getTotalFunding()
-        public
-        view
-        returns (uint256 funding)
-    {
-        return totalFunding;
-    }
-
-    /**
-     * @dev Donor Getter.
-     * @param donor Address for the donor.
-     * @return The Donor struct.
-     */
-    function getDonor(address donor)
-        public
-        view
-        returns (Donor memory)
-    {
-        return donors[donor];
-    }
-
-    /**
-     * @dev Grantee Getter.
-     * @param grantee Address for the grantee.
-     * @return The Grantee struct.
-     */
-    function getGrantee(address grantee)
-        public
-        view
-        returns (Grantee memory)
-    {
-        return grantees[grantee];
-    }
-
-    /**
-     * @dev Manager Getter.
-     * @return The manager address.
-     */
-    function getManager()
-        public
-        view
-        returns (address)
-    {
-        return manager;
+        return totalFunding
+            .sub(totalPayed)
+            .sub(totalRefunded)
+            .sub(pendingPayments);
     }
 
 
     /*----------  Public Methods  ----------*/
+locked/notlocked reentrancy guard
 
+locked = true
+_;
+locked = false
     /**
      * @dev Fund a grant proposal.
      * @param value Amount in WEI or GRAINS to fund.
@@ -200,21 +160,23 @@ contract Grant is AbstractGrant, ISignal {
      */
     function fund(uint256 value)
         public
-        payable
         returns (uint256 balance)
     {
 
+rev or consider if needed?
         require(
             donors[msg.sender].refunded == 0 &&
             donors[msg.sender].refundApproved == 0,
             "fund::Error. Cannot fund if previously approved for, or received, refund."
         );
 
+change to funding not met
         require(
             grantStatus == GrantStatus.INIT,
             "fund::Status Error. Must be GrantStatus.INIT to fund."
         );
 
+make optional
         require(
             // solium-disable-next-line security/no-block-members
             fundingExpiration > now,
@@ -229,13 +191,6 @@ contract Grant is AbstractGrant, ISignal {
             newTotalFunding = targetFunding;
         }
 
-        // Defer to correct funding method.
-        if(currency == address(0)) {
-            fundWithEther(value, change);
-        } else {
-            fundWithToken(value, change);
-        }
-
         // Record Contribution.
         donors[msg.sender].funded = donors[msg.sender].funded
             .add(value)
@@ -244,15 +199,17 @@ contract Grant is AbstractGrant, ISignal {
         // Update funding tally.
         totalFunding = newTotalFunding;
 
+        // Defer to correct funding method.
+        if(currency == address(0)) {
+            fundWithEther(value, change);
+        } else {
+            fundWithToken(value, change);
+        }
+
         // Log events.
         emit LogFunding(msg.sender, value.sub(change));
 
-        if (targetFunding == newTotalFunding) {
-            grantStatus = GrantStatus.SUCCESS;
-            emit LogStatusChange(GrantStatus.SUCCESS);
-        }
-
-        return newTotalFunding;
+        return totalFunding;
     }
 
     /**
@@ -266,6 +223,7 @@ contract Grant is AbstractGrant, ISignal {
         returns (uint256 balance)
     {
 
+rev condition without GrantStatus
         require(
             grantStatus == GrantStatus.SUCCESS,
             "payout::Status Error. Must be GrantStatus.SUCCESS to issue payment."
@@ -442,6 +400,8 @@ contract Grant is AbstractGrant, ISignal {
     function withdrawPayout(address grantee, uint256 value)
         private
     {
+
+        do we want to alloow push?
         require(
             msg.sender == grantee,
             "withdrawPayout::Invalid Argument. grantee must match msg.sender."
@@ -590,7 +550,7 @@ contract Grant is AbstractGrant, ISignal {
         // let r = total refund checkpoint
         // let p = total payed out
         // (d * 10^18) / ((t-r)*10^18) * (t - r - p ) / 1
-        // Calculate % of balance owned.
+        // Calculate amount of remaining of balance owned to donor.
         uint256 base = totalFunding
             .sub(refundCheckpoint)
             .mul(PRECISION_D);
