@@ -88,7 +88,7 @@ contract AbstractGrant {
 
     /*----------  Methods  ----------*/
 
-   /**
+    /**
      * @dev Get available grant balance.
      * @return Balance remaining in contract.
      */
@@ -96,6 +96,15 @@ contract AbstractGrant {
         public
         view
         returns(uint256 balance);
+
+    /**
+     * @dev Funding status check.
+     * @return true if can fund grant.
+     */
+    function canFund()
+        public
+        view
+        returns(bool);
 
     /**
      * @dev Fund a grant proposal.

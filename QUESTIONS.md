@@ -1,26 +1,26 @@
 Questions:
 
 
-- [ ] All or nothing refunds. (prevents collusion with manager)
+- [x] All or nothing refunds. (prevents collusion with manager)
 - [] consider pay by increments (manager approve): total available for grants (< target funding )
 
-- PAY as group or pay individuals 
+- ~~PAY as group or pay individuals ~~
 
 - discuss: donors can't be individually refunded but grantees can be individually paid
   - authorize payment as simple amount OR authorize individual grantee addresses.
   - authorizePayment(value, address[], amounts[]) interface, can it handle both? or alter
-  - withdrawPayment / withdrawRefund
+  - [x] withdrawPayment / withdrawRefund
   - think about: DESIGN all or nothings (like donors) for granteee payments?
 
 
-  switch to approve/withdraw instead of overlaoding
+- [x] switch to approve/withdraw instead of overlaoding
 
   
-- confirm fund function does not exceed gas limit for fallback. and test from contracts
-- refund amount instead of person. (authorizeRefund(amount) donor calls getRefund)
-- ask why return balance? can we return a boolean (if payment that could fail)? or nothing?
-- all or nothing means all donors not all of donated funds
-add canFund function
+- [ ] confirm fund function does not exceed gas limit for fallback. and test from contracts
+- [x] refund amount instead of person. (authorizeRefund(amount) donor calls getRefund)
+- [x] ask why return balance? can we return a boolean (if payment that could fail)? or nothing?
+- [x] all or nothing means all donors not all of donated funds
+- [x] add canFund function
 
 
 - [ ] can we combine / reduce grant state
@@ -31,7 +31,7 @@ add canFund function
 - [x] can we reduce the # of grant status?
 - [x] do we want to store grant recipients as array or mapping
   - [x] do we need to iterate over this in the contract logic (A: no)
-  - NEW depends on grant payout model (pull no, push yes)
+  - depends on grant payout model (pull no, push yes)
 - [x] can we remove "request payment"
   - [x] are we assuming that grant managers have robust offchain comm with grantees
   - [x] what if everyone is a grant manager?
@@ -53,8 +53,8 @@ Design Question:
   - [x] OR should we just do this as separate contracts with a single address?
   - [x] We do want to be able to batch grants so they don't have to hit separate
     thresholds
-- [ ] Maybe design a "Manager" interface that implements whitelists of grantees,
-  whether or not we can re-allocate funds between grantees, etc...
+- [ ] ~~Maybe design a "Manager" interface that implements whitelists of grantees,
+  whether or not we can re-allocate funds between grantees, etc...~~
 
 Refunds:
 - [x] Three refund operations:
@@ -64,7 +64,7 @@ Refunds:
   - [x] 2. The grant managers decides to refund the donors.
   - [x] 3. The grant reaches the funding goal, but funds are still remaining after a second expiration date
    - [x] kill expiration on the grant contract which freezes all future payouts
-  - [ ] !!!NOTE!!! auto triggered refunding halts previously approved but never claimed payouts. Fix by tracking pending payouts.
+  - [ ] ~~[no longer a problem] auto triggered refunding halts previously approved but never claimed payouts. Fix by tracking pending payouts.~~
 
 
 Stretch Goal:
@@ -74,12 +74,12 @@ Stretch Goal:
   - [ ] ~~what are all the interfaces between grantees / managers / grants?~~
 
 TODO:
-- [ ] Validate targeted funding sums to grantee allocations.
-- [ ] MAYBE partial refunds by tracking donations
+- [x] Validate targeted funding sums to grantee allocations.
+- [x] MAYBE partial refunds by tracking donations
 - [x] auto refund if expiration and target not reached
-  - [ ] open to anybody can trigger
+  - [x] open to anybody can trigger
 - [x] use counter for ID
-- [ ] signal should be a function (yes or no)
+- [x] signal should be a function (yes or no)
 - [x] uniqueness check on grantees
   - [x] also switch % to amount and check matches total
 
@@ -109,10 +109,10 @@ https://github.com/christianlundkvist/simple-multisig/blob/720386bc141b8f5e5d4dc
 - [x] Reject eth if currency is token.
 - [x] Fallback function for simple eth transfer
 - [x] Return the rest if over funded.
-- [ ] Fixed sized grants you pre-populate on create
-  - [ ] If dynamic sized grant you calculate.
+- [x] Fixed sized grants you pre-populate on create
+  - [ ] ~~If dynamic sized grant you calculate.~~
 
 
-- [ ] Consistent return value (funds or success/fail)?
+- [x] Consistent return value (funds or success/fail)?
 - [ ] ~~Sweep (accidental transfers)?~~
 - [x] Grantee cannot be GrantManager.

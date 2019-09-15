@@ -47,7 +47,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
     {
 
         require(
-            _fundingExpiration ==0 || _fundingExpiration < _contractExpiration,
+            _fundingExpiration == 0 || _fundingExpiration < _contractExpiration,
             "constructor::Invalid Argument. _fundingExpiration must be 0 or less than _contractExpiration."
         );
 
@@ -80,7 +80,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         fundingExpiration = _fundingExpiration;
         contractExpiration = _contractExpiration;
 
-        // Check _targetFunding against sum of _amounts array. 
+        // Check _targetFunding against sum of _amounts array.
         uint256 totalFundingAmount;
 
         // Initialize Grantees.
@@ -174,6 +174,22 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
             .sub(totalRefunded);
     }
 
+    /**
+     * @dev Funding status check.
+     * @return true if can fund grant.
+     */
+    function canFund()
+        public
+        view
+        returns(bool)
+    {
+        return (
+            // solium-disable-next-line security/no-block-members
+            (fundingExpiration == 0 || fundingExpiration > now) &&
+            totalFunding < targetFunding
+        );
+    }
+
     /*----------  Public Methods  ----------*/
 
     /**
@@ -188,14 +204,8 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
     {
 
         require(
-            totalFunding < targetFunding,
-            "fund::Status Error. Funding target already met."
-        );
-
-        require(
-            // solium-disable-next-line security/no-block-members
-            fundingExpiration == 0 || fundingExpiration > now,
-            "fund::Date Error. fundingExpiration date has passed, cannot receive new donations."
+            canFund(),
+            "fund::Status Error. Funding expired or target funding reached."
         );
 
         uint256 newTotalFunding = totalFunding.add(value);
@@ -227,7 +237,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         if(totalFunding == targetFunding) {
             emit LogFundingComplete();
         }
-    
+
         return true;
     }
 
@@ -326,10 +336,11 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
 
     /**
      * @dev Voting Signal Method.
+     * @param support true if in support of grant false if opposed.
      * @param value Number of signals denoted in Token GRAINs or WEI.
      * @return True if successful, otherwise false.
      */
-    function signal(uint256 value)
+    function signal(bool support, uint256 value)
         external
         payable
         returns (bool)
@@ -340,7 +351,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
             "signal::Status Error. Signalling only permitted prior to reaching funding target."
         );
 
-        emit LogSignal(msg.sender, currency, value);
+        emit LogSignal(support, msg.sender, currency, value);
 
         // Prove signaler has control of funds.
         if (currency == address(0)) {
