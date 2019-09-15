@@ -20,6 +20,7 @@ contract AbstractGrant {
     uint256 public fundingExpiration;            // (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
     uint256 public contractExpiration;           // (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
     uint256 public refundCheckpoint;             // Balance when donor initiated refund begins. Calculate % of funds donor may refund themself.
+    bool public grantCancelled;                  //
     mapping(address => Grantee) public grantees; // Grant recipients by address.
     mapping(address => Donor) public donors;     // Donors by address.
 
@@ -34,7 +35,6 @@ contract AbstractGrant {
     struct Donor {
         uint256 funded;          // Total amount funded.
         uint256 refunded;        // Cumulative amount refunded.
-        uint256 refundApproved;  // Pending refund approved by Manager.
     }
 
 
@@ -73,10 +73,10 @@ contract AbstractGrant {
 
     /**
      * @dev Manager approving a payment.
-     * @param grantee Address receiving payment.
-     * @param value Amount in WEI or GRAINS refunded.
+     * @param amount Amount in WEI or GRAINS refunded across all donors.
+     * @param totalRefunded Cumulative amount in WEI or GRAINS refunded across all donors.
      */
-    event LogPaymentApproval(address indexed grantee, uint256 value);
+    event LogPaymentApproval(uint256 amount, uint256 totalRefunded);
 
     /**
      * @dev Manager approving a refund.
@@ -87,15 +87,6 @@ contract AbstractGrant {
 
 
     /*----------  Methods  ----------*/
-
-    /**
-     * @dev Total funding getter.
-     * @return Cumulative funding received for this grant.
-     */
-    function getTotalFunding()
-        public
-        view
-        returns (uint256 funding);
 
     function getAvailableBalance()
         public
@@ -110,7 +101,7 @@ contract AbstractGrant {
     function fund(uint256 value)
         public
         payable
-        returns (uint256 balance);
+        returns (bool);
 
     /**
      * @dev Pay a grantee.
@@ -133,9 +124,7 @@ contract AbstractGrant {
 
     /**
      * @dev Cancel grant and enable refunds.
-     * @return Remaining funding available in this grant.
      */
     function cancelGrant()
-        public
-        returns (uint256 balance);
+        public;
 }
