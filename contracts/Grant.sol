@@ -186,7 +186,8 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         return (
             // solium-disable-next-line security/no-block-members
             (fundingExpiration == 0 || fundingExpiration > now) &&
-            totalFunding < targetFunding
+            totalFunding < targetFunding &&
+            !grantCancelled
         );
     }
 
@@ -205,7 +206,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
 
         require(
             canFund(),
-            "fund::Status Error. Funding expired or target funding reached."
+            "fund::Status Error. Grant not open to funding."
         );
 
         uint256 newTotalFunding = totalFunding.add(value);
@@ -305,6 +306,8 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
                 "cancelGrant::Invalid Sender. Sender must be grant manager unless grant missed funding or contract expiration."
             );
         }
+
+        totalRefunded = totalRefunded.add(getAvailableBalance());
 
         grantCancelled = true;
 

@@ -16,11 +16,11 @@ contract AbstractGrant {
     uint256 public totalFunding;                 // Cumulative funding donated by donors.
     uint256 public totalPayed;                   // Cumulative funding payed to grantees.
     uint256 public totalRefunded;                // Cumulative funding refunded to donors.
-    uint256 public pendingPayments;              //
+    uint256 public pendingPayments;              // Payments approved to grantees but not yet withdrawn.
     uint256 public fundingExpiration;            // (Optional) Block number after which votes OR funds (dependant on GrantType) cannot be sent.
     uint256 public contractExpiration;           // (Optional) Block number after which payouts must be complete or anyone can trigger refunds.
     uint256 public refundCheckpoint;             // Balance when donor initiated refund begins. Calculate % of funds donor may refund themself.
-    bool public grantCancelled;                  //
+    bool public grantCancelled;                  // Flag to indicate when grant is cancelled.
     mapping(address => Grantee) public grantees; // Grant recipients by address.
     mapping(address => Donor) public donors;     // Donors by address.
 
