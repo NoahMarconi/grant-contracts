@@ -73,21 +73,25 @@ contract AbstractGrant {
 
     /**
      * @dev Manager approving a payment.
-     * @param amount Amount in WEI or GRAINS refunded across all donors.
-     * @param totalRefunded Cumulative amount in WEI or GRAINS refunded across all donors.
+     * @param grantee Address receiving payment.
+     * @param value Amount in WEI or GRAINS refunded.
      */
-    event LogPaymentApproval(uint256 amount, uint256 totalRefunded);
+    event LogPaymentApproval(address indexed grantee, uint256 value);
 
     /**
      * @dev Manager approving a refund.
-     * @param donor Address receiving refund.
-     * @param value Amount in WEI or GRAINS refunded.
+     * @param amount Amount in WEI or GRAINS refunded across all donors.
+     * @param totalRefunded Cumulative amount in WEI or GRAINS refunded across all donors.
      */
-    event LogRefundApproval(address indexed donor, uint256 value);
+    event LogRefundApproval(uint256 amount, uint256 totalRefunded);
 
 
     /*----------  Methods  ----------*/
 
+   /**
+     * @dev Get available grant balance.
+     * @return Balance remaining in contract.
+     */
     function getAvailableBalance()
         public
         view
@@ -96,31 +100,49 @@ contract AbstractGrant {
     /**
      * @dev Fund a grant proposal.
      * @param value Amount in WEI or GRAINS to fund.
-     * @return Remaining funding available in this grant.
+     * @return true if payment successful.
      */
     function fund(uint256 value)
         public
-        payable
         returns (bool);
 
     /**
-     * @dev Pay a grantee.
+     * @dev Approve payment to a grantee.
      * @param grantee Recipient of payment.
      * @param value Amount in WEI or GRAINS to fund.
      * @return Remaining funding available in this grant.
      */
-    function payout(address grantee, uint256 value)
-        public
-        returns (uint256 balance);
+    function approvePayout(address grantee, uint256 value)
+        public;
 
     /**
-     * @dev Refund a grantor.
-     * @param donor Recipient of refund.
-     * @return Remaining funding available in this grant.
+     * @dev Withdraws portion of the contract's available balance.
+     *      Amount must first be approved by Manager.
+     * @param grantee Grantee address to pay.
+     * @return true if withdraw successful.
      */
-    function refund(address donor)
+    function withdrawPayout(address grantee, uint256 value)
         public
-        returns (uint256 balance);
+        returns (bool);
+
+    /**
+     * @dev Approve refunding a portion of the contract's available balance.
+     *      Refunds are split between donors based on their contribution to totalFunded.
+     * @param amount Amount to refund.
+     */
+    function approveRefund(uint256 amount)
+        public;
+
+
+    /**
+     * @dev Withdraws portion of the contract's available balance.
+     *      Amount donor receives is proportionate to their funding contribution.
+     * @param donor Donor address to refund.
+     * @return true if withdraw successful.
+     */
+    function withdrawRefund(address donor)
+        public
+        returns(bool);
 
     /**
      * @dev Cancel grant and enable refunds.

@@ -336,8 +336,8 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
     {
 
         require(
-            grantStatus == GrantStatus.INIT,
-            "signal::Status Error. Must be GrantStatus.INIT to signal."
+            totalFunding < targetFunding,
+            "signal::Status Error. Signalling only permitted prior to reaching funding target."
         );
 
         emit LogSignal(msg.sender, currency, value);
@@ -382,7 +382,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
     /*----------  Withdrawal Methods  ----------*/
 
     function withdrawPayout(address grantee, uint256 value)
-        private
+        public
         nonReentrant
         returns (bool)
     {
@@ -421,6 +421,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
     function withdrawRefund(address donor)
         public
         nonReentrant
+        returns(bool)
     {
 
         uint256 percentContributed = donors[donor].funded
@@ -461,6 +462,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
 
         emit LogRefund(donor, eligibleRefund);
 
+        return true;
     }
 
 
