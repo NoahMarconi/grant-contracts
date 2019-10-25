@@ -15,7 +15,7 @@ contract GrantFactory {
 
 
     /*----------  Globals  ----------*/
-    uint256 id;
+    uint256 public id;
     mapping(uint256 => address) internal grants;  // Grants mapped by GUID.
 
 
@@ -69,7 +69,7 @@ contract GrantFactory {
         grants[grantId] = grantAddress;
 
         // Increment id counter.
-        id = id.add(1);
+        id += 1;
 
         emit LogNewGrant(grantId, grantAddress);
 
