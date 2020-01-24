@@ -21,7 +21,7 @@ describe("Grant", () => {
     const [granteeWallet, donorWallet, managerWallet] = wallets;
     const token: Contract = await waffle.deployContract(donorWallet, GrantToken, ["Grant Token", "GT", 18]);
 
-   console.log('Total wallets ' + wallets.length);
+ //  console.log('Total wallets ' + wallets.length);
   // console.log(" index, ", granteeWallet);
     // wallets.forEach((wallet, index) => {
     //   console.log(index + " index, ", wallet);
@@ -94,18 +94,18 @@ describe("Grant", () => {
         _granteeWallet = granteeWallet;
       });
 
-      it.skip("should fail if ether sent does not match value arg", async () => {
+      it("should fail if ether sent does not match value arg", async () => {
         await expect(_grantFromDonor.signal(_positiveSupport, 1e6))
           .to.be.revertedWith("signal::Invalid Argument. value must match msg.value.");
       });
 
-      it.skip("should emit LogSignal event", async () => {
+      it("should emit LogSignal event", async () => {
         await expect(_grantFromDonor.signal(_positiveSupport, 1e6, { value: 1e6 }))
           .to.emit(_grantFromDonor, "LogSignal")
           .withArgs(_positiveSupport, _donorAddress, constants.AddressZero, 1e6);
       });
 
-      it.skip("sender should have their funds returned", async () => {
+      it("sender should have their funds returned", async () => {
         const startingBalance = await _provider.getBalance(_donorAddress);
         // Set gas price to 1 to make it simple to calc gas spent in eth. 
         const receipt = await (await _grantFromDonor.signal(_positiveSupport, 1e6, { value: 1e6, gasPrice: 1 })).wait();
@@ -114,14 +114,13 @@ describe("Grant", () => {
       });
 
       describe.skip("After funding success", () => {
-
         before(async () => {
-          await _grantFromDonor.fund(10000, { value: 10000 });
+          await _grantFromDonor.fund(10, { value: 10, gasPrice: 1 });
         });
 
         it("should revert", async () => {
-          await expect(_grantFromDonor.signal(1e6, { value: 1e6 }))
-            .to.be.revertedWith("signal::Status Error. Must be GrantStatus.INIT to signal.");
+          await expect(_grantFromDonor.signal(_positiveSupport, 1e6, { value: 1e6 }))
+            .to.be.revertedWith("signal::Status Error. Must be GrantStatus.INIT to signal.00");
         });
 
       });
