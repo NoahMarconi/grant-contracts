@@ -27,26 +27,18 @@ describe("Grant", () => {
     const currentTime = (await provider.getBlock(await provider.getBlockNumber())).timestamp;
     const [granteeWallet, donorWallet, managerWallet] = wallets;
     const token: Contract = await waffle.deployContract(donorWallet, GrantToken, ["Grant Token", "GT", 18]);
-
-   // console.log('Total wallets ' + wallets.length);
-    // wallets.forEach((wallet, index) => {
-    //   console.log(index + " index, ", wallet);
-    // });
-
     const grantWithToken: Contract = await waffle.deployContract(
       granteeWallet,
       Grant,
       [[granteeWallet.address], [1000], managerWallet.address, token.address, 1000, currentTime + 86400, currentTime + (86400 * 2)],
       { gasLimit: 6e6 }
     );
-
     const grantWithEther: Contract = await waffle.deployContract(
       granteeWallet,
       Grant,
       [[granteeWallet.address], [1000], managerWallet.address, AddressZero, 1000, currentTime + 86400, currentTime + (86400 * 2)],
       { gasLimit: 6e6 }
     );
-
     const grantFactory: Contract = await waffle.deployContract(donorWallet, GrantFactory, undefined, { gasLimit: 6e6 });
 
     // Initial token balance.
@@ -56,8 +48,6 @@ describe("Grant", () => {
     const grantFromDonorWithEther: Contract = new Contract(grantWithEther.address, Grant.abi, donorWallet);
     const grantFromManager: Contract = new Contract(grantWithToken.address, Grant.abi, managerWallet);
     const grantFromManagerWithEther: Contract = new Contract(grantWithEther.address, Grant.abi, managerWallet);
-
-    const grantFromDonorForFunding: Contract = new Contract(donorWallet.address, Grant.abi, donorWallet);
 
     return {
       grantFactory,
@@ -74,19 +64,14 @@ describe("Grant", () => {
       managerWallet,
       fundingExpiration: currentTime + 86400,
       contractExpiration: currentTime + (86400 * 2),
-      provider,
-      wallets,
-      grantFromDonorForFunding
+      provider
     };
   }
-
 
   describe("When funding tx complete", () => {
     let _grantFromDonorWithEther: Contract;
     let _grantFromManagerWithEther: Contract;
     let _provider: any;
-    let _receipt;
-    let _grantFromDonorForFunding: Contract;
     let _donorWallet: Wallet;
     let _grantFromDonor: Contract;
     const _amount = 0;
@@ -97,7 +82,6 @@ describe("Grant", () => {
         grantFromDonorWithEther,
         grantFromManagerWithEther,
         provider,
-        grantFromDonorForFunding,
         donorWallet,
         grantFromDonor 
       } = await waffle.loadFixture(fixture);
@@ -105,22 +89,22 @@ describe("Grant", () => {
       _grantFromDonorWithEther = grantFromDonorWithEther;
       _grantFromManagerWithEther = grantFromManagerWithEther;
       _provider = provider;
-      _grantFromDonorForFunding = grantFromDonorForFunding;
       _donorWallet = donorWallet;
       _grantFromDonor = grantFromDonor;
       
+      // it("should permit sending to the fallback function", async () => {
+      //   console.log("-----------------");
+      //   let receipt = await _donorWallet.sendTransaction(
+      //     { to: _grantFromDonor.address, value: 5000 }
+      //   );
+      //   console.log("Receipt " + JSON.stringify(receipt));
+      // });
 
-      it.skip("should permit sending to the fallback function", async () => {
-        await _donorWallet.sendTransaction(
-          { to: _grantFromDonor.address, value: 5000 }
-        );
-      });
-
-      // const balance = await _provider.getBalance(_grantFromDonor.address);
-      // console.log("Balance " + balance);
+      const balance = await _provider.getBalance(_grantFromDonor.address);
+      console.log("Balance " + balance);
       
-      // expect(balance).to.eq(0);
-      // _res = await (await _grantFromDonor.fund(15000, { value: 15000 })).wait();
+      expect(balance).to.eq(0);
+      _res = await _grantFromDonor.fund(15000, { value: 15000 });
   
       //console.log("_grantFromDonorWithEther " + _grantFromDonorWithEther.address);
       //console.log("_grantFromDonorForFunding " + _grantFromDonorForFunding.address);
