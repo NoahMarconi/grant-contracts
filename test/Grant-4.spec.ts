@@ -90,6 +90,7 @@ describe("Grant", () => {
     let _donorWallet: Wallet;
     let _grantFromDonor: Contract;
     const _amount = 0;
+    let _res: any;
 
     before(async () => {
       const { 
@@ -108,31 +109,21 @@ describe("Grant", () => {
       _donorWallet = donorWallet;
       _grantFromDonor = grantFromDonor;
       
-      // Actual Code --------------
-      // const balance = await _provider.getBalance(_grantFromManagerWithEther.address);
-      // console.log("balance " + balance);
-      //expect(balance).to.eq(0);
-      // await expect(_grantFromDonorWithEther.fund(1500, { value: 1500 }))
-      //   .to.be.revertedWith("fund::Status Error. Grant not open to funding.");
-     // _receipt = await _grantFromDonorWithEther.fund(1500, { value: 1500 });
 
-      it("should permit sending to the fallback function", async () => {
+      it.skip("should permit sending to the fallback function", async () => {
         await _donorWallet.sendTransaction(
           { to: _grantFromDonor.address, value: 5000 }
         );
       });
-      console.log("_grantFromDonorWithEther " + _grantFromDonorWithEther.address);
-      console.log("_grantFromDonorForFunding " + _grantFromDonorForFunding.address);
-    });
 
-    it.skip("1. should revert on funding", async() => {
-      await expect(_grantFromDonorWithEther.fund(1500, { value: 1500 }))
-        .to.be.revertedWith("fund::Status Error. Grant not open to funding.");
-    });
-
-    it.skip("2. should revert on funding", async() => {
-      await expect(_grantFromDonorForFunding.fund(1500))
-        .to.be.revertedWith("fund::Status Error. Grant not open to funding.");
+      // const balance = await _provider.getBalance(_grantFromDonor.address);
+      // console.log("Balance " + balance);
+      
+      // expect(balance).to.eq(0);
+      // _res = await (await _grantFromDonor.fund(15000, { value: 15000 })).wait();
+  
+      //console.log("_grantFromDonorWithEther " + _grantFromDonorWithEther.address);
+      //console.log("_grantFromDonorForFunding " + _grantFromDonorForFunding.address);
     });
 
     it.skip("should emit LogFunding event", async () => {
@@ -237,7 +228,7 @@ describe("Grant", () => {
           expect(await _grantFromDonor.availableBalance()).to.eq((_fundAmount - _refundAmount));
         });
 
-        // Need to ask
+        // Pending
         it.skip("should revert if sender has received a refund", async () => {
           // Refund approved.
           await expect(_grantFromDonor.fund(50000));
