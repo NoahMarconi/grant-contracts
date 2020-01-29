@@ -15,13 +15,6 @@ const { expect, assert } = chai;
 
 describe("Grant", () => {
 
-  const GrantStatus = {
-    INIT:     0,
-    SUCCESS:  1,
-    DONE:     2
-  }
-
-
   async function fixture(provider: any, wallets: Wallet[]) {
 
     const currentTime = (await provider.getBlock(await provider.getBlockNumber())).timestamp;
@@ -157,16 +150,18 @@ describe("Grant", () => {
         expect(await _grantFromDonor.canFund()).to.be.true;
       });
 
+      // following test case should be last, because Grant is getting cancelled.
+      it('should reject funding if grant is already cancelled', async () => {
+        await _grantFromManagerWithEther.cancelGrant();
+        await expect(_grantFromDonorWithEther.fund(_fundAmount, { value: _fundAmount}))
+          .to.be.revertedWith('fund::Status Error. Grant not open to funding.')
+      });
     });
     
     describe("With Token", () => {
-  
-      // let _managerWallet: Wallet;
-      // let _grantFromGrantee: Contract;
-      // let _token: Contract;
+
       let _donorWallet: Wallet;
       let _grantFromDonor: Contract;
-
       let _grantFromManager: Contract;
       const _fundAmount = 500;
       const _refundAmount = 20;
@@ -176,22 +171,17 @@ describe("Grant", () => {
       before(async () => {
         const {
           donorWallet,
-        //  managerWallet,
           grantFromDonor,
-        //  grantFromGrantee,
           token,
           grantFromManager,
         } = await waffle.loadFixture(fixture);
 
         _donorWallet = donorWallet;
-       // _managerWallet = managerWallet;
         _grantFromDonor = grantFromDonor;
-       // _grantFromGrantee = grantFromGrantee;
-       // _token = token;
         _grantFromManager = grantFromManager;
 
         await token.approve(grantFromManager.address, 5000);
-        
+
         // Donor fund Ether
         _fundReceipt = await (await _grantFromDonor.fund(_fundAmount)).wait();
         //console.log('fund Receipt ' + JSON.stringify(_fundReceipt)
@@ -247,12 +237,18 @@ describe("Grant", () => {
       });
 
       // Pending
-      // fund::Status Error. Grant not open to funding.
       // fund::Transfer Error. ERC20 token transferFrom failed.
 
       it("should reject if donor fund ether for token funded grants", async () => {
         await expect(_grantFromDonor.fund(_fundAmount, { value: _fundAmount }))
           .to.be.revertedWith("fundWithToken::Currency Error. Cannot send Ether to a token funded grant.");
+      });
+
+      // following test case should be last, because Grant is getting cancelled.
+      it('should reject funding if grant is already cancelled', async () => {
+          await _grantFromManager.cancelGrant();
+          await expect(_grantFromDonor.fund(_fundAmount))
+            .to.be.revertedWith('fund::Status Error. Grant not open to funding.')
       });
     });
 

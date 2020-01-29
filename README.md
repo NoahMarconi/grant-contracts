@@ -59,4 +59,5 @@ const grantFromManagerWithEther: Contract = new Contract(grantWithEther.address,
 here gas fees are paid by the managerWallet address
 AND in the contract msg.sender is the manager wallet address
 
-new Contract is just to initialize an interface to access an already deployed contractnew Contract allows you to change who sends gas fee for transactions using the interface you create
+new Contract is just to initialize an interface to access an already deployed contract
+new Contract allows you to change who sends gas fee for transactions using the interface you create
