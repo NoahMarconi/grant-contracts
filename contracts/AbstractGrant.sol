@@ -111,7 +111,7 @@ contract AbstractGrant {
      * @return true if payment successful.
      */
     function fund(uint256 value)
-        public
+        public payable
         returns (bool);
 
     /**

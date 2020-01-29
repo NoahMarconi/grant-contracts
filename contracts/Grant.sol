@@ -193,7 +193,8 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
      */
     function fund(uint256 value)
         public
-        nonReentrant // OpenZeppelin mutex due to sending change if over-funded.
+        //nonReentrant // OpenZeppelin mutex due to sending change if over-funded.
+        payable
         returns (bool)
     {
 
