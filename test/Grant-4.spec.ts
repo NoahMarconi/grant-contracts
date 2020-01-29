@@ -68,90 +68,92 @@ describe("Grant", () => {
     };
   }
 
-  describe("When funding tx complete", () => {
-    let _grantFromDonorWithEther: Contract;
-    let _grantFromManagerWithEther: Contract;
-    let _provider: any;
-    let _donorWallet: Wallet;
-    let _grantFromDonor: Contract;
-    const _amount = 0;
-    let _res: any;
+  describe("When Funding and Refunding", () => {
 
-    before(async () => {
-      const { 
-        grantFromDonorWithEther,
-        grantFromManagerWithEther,
-        provider,
-        donorWallet,
-        grantFromDonor 
-      } = await waffle.loadFixture(fixture);
-      
-      _grantFromDonorWithEther = grantFromDonorWithEther;
-      _grantFromManagerWithEther = grantFromManagerWithEther;
-      _provider = provider;
-      _donorWallet = donorWallet;
-      _grantFromDonor = grantFromDonor;
-      
-      // it("should permit sending to the fallback function", async () => {
-      //   console.log("-----------------");
-      //   let receipt = await _donorWallet.sendTransaction(
-      //     { to: _grantFromDonor.address, value: 5000 }
-      //   );
-      //   console.log("Receipt " + JSON.stringify(receipt));
-      // });
-
-      const balance = await _provider.getBalance(_grantFromDonor.address);
-      console.log("Balance " + balance);
-      
-      expect(balance).to.eq(0);
-      _res = await _grantFromDonor.fund(15000, { value: 15000 });
+    describe("With Ether", () => {
+      let _grantFromDonorWithEther: Contract;
+      let _grantFromManagerWithEther: Contract;
+      let _provider: any;
+      let _donorWallet: Wallet;
+      let _grantFromDonor: Contract;
   
-      //console.log("_grantFromDonorWithEther " + _grantFromDonorWithEther.address);
-      //console.log("_grantFromDonorForFunding " + _grantFromDonorForFunding.address);
-    });
+      let _fundReceipt: any;
+      const _fundAmount = 1e6;
+      const _fundAmountAfterFunding = 1e3;
+      const _refundAmount = 5e1;
+  
+      before(async () => {
+        const { 
+          grantFromDonorWithEther,
+          grantFromManagerWithEther,
+          provider,
+          donorWallet,
+          grantFromDonor 
+        } = await waffle.loadFixture(fixture);
+        
+        _grantFromDonorWithEther = grantFromDonorWithEther;
+        _grantFromManagerWithEther = grantFromManagerWithEther;
+        _provider = provider;
+        _donorWallet = donorWallet;
+        _grantFromDonor = grantFromDonor;
+  
+        // Donor fund Ether
+        _fundReceipt = await(await _grantFromDonorWithEther.fund(_fundAmount, { value: _fundAmount})).wait();
+      });
+  
+      it('should be funded by donor', async () => {
+        expect(await _grantFromDonorWithEther.totalFunding()).to.eq(_fundAmountAfterFunding);
+      });
+  
+      it('should revert if donor approves refund', async () => {
+        await expect(_grantFromDonorWithEther.approveRefund((_fundAmountAfterFunding + _refundAmount), AddressZero))
+          .to.be.revertedWith("onlyManager::Permission Error. Function can only be called by manager");
+      });
+  
+      it('should revert if manager approves refund which exceeds the avaliable fund ', async () => {
+        await expect(_grantFromManagerWithEther.approveRefund((_fundAmountAfterFunding + _refundAmount), AddressZero))
+          .to.be.revertedWith("approveRefund::Invalid Argument. Amount is greater than Available Balance.");
+      });
+  
+      it('should be refunded by manager', async () => {
+        await _grantFromManagerWithEther.approveRefund(_refundAmount, AddressZero);
+        
+        const totalRefunded = await _grantFromManagerWithEther.totalRefunded();
+        expect(totalRefunded).to.eq(_refundAmount);
+        
+        const availableBalance = await _grantFromDonorWithEther.availableBalance();
+        expect(availableBalance).to.eq((_fundAmountAfterFunding - _refundAmount));
+      });
+  
+      it("should emit Events", async () => {
+        //console.log("_fundReceipt " + JSON.stringify(_fundReceipt));
+        const logFundingEvent = _fundReceipt.events[0].eventSignature;
+        expect(logFundingEvent).to.eq("LogFunding(address,uint256)");
 
-    it.skip("should emit LogFunding event", async () => {
-      const emittedEvent = _res.events[0];
-      expect(emittedEvent.event).to.eq("LogFunding");
-      expect(emittedEvent.eventSignature).to.eq("LogFunding(address,uint256)");
-
-      const { donor, value } = emittedEvent.args;
-      expect(donor).to.eq(_donorWallet.address);
-      // Only 10000 as change from 15000 was returned.
-      expect(value).to.eq(bigNumberify(10000));
-    });
-
-    it.skip("should emit LogStatusChange event", async () => {
-      const emittedEvent = _res.events[1];
-      expect(emittedEvent.event).to.eq("LogStatusChange");
-      expect(emittedEvent.eventSignature).to.eq("LogStatusChange(uint8)");
-      expect(emittedEvent.args).to.include({ grantStatus: GrantStatus.SUCCESS });
-    });
-
-    describe("Grant data", () => {
-
-      it("should update donor mapping", async () => {
-        const donorStruct = await _grantFromDonor.donors(_donorWallet.address);
-        const { funded, refunded } = donorStruct;
-        expect(funded).to.eq(_amount);
-        expect(refunded).to.eq(0);
+        if(_fundReceipt.events.length == 2){
+          const logFundingComplete = _fundReceipt.events[1].eventSignature;
+          expect(logFundingComplete).to.eq("LogFundingComplete()");
+        }
+        // const { donor, value } = emittedEvent.args;
+        // expect(donor).to.eq(_donorWallet.address);
+        // // Only 10000 as change from 15000 was returned.
+        // expect(value).to.eq(bigNumberify(10000));
       });
 
-      it("should update totalFunded", async () => {
-        expect(await _grantFromDonor.totalFunding()).to.eq(_amount);
+      it("should donor funding balances == fund amount", async () => {
+        const donor = await _grantFromDonorWithEther.donors(_donorWallet.address);
+        const { funded, refunded } = donor;
+        
+        expect(funded).to.eq(_fundAmountAfterFunding);
+        //expect(refunded).to.eq(0);
       });
 
-      it("should update grantStatus", async () => {
-        //const isGrantCancelled = await _grantFromDonor.grantCancelled();
+      it("should grant status to be true", async () => {
         expect(await _grantFromDonor.canFund()).to.be.true;
       });
 
-      it(`should update the contract balance,
-                with change returned to donor if over funded`, async () => {
-        expect(await _provider.getBalance(_grantFromDonor.address)).to.eq(_amount);
-      });
-      
     });
+    
 
     
 
@@ -160,6 +162,8 @@ describe("Grant", () => {
       let _managerWallet: Wallet;
       let _grantFromGrantee: Contract;
       let _token: Contract;
+      let _donorWallet: Wallet;
+      let _grantFromDonor: Contract;
 
       before(async () => {
         const {
