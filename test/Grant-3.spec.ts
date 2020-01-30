@@ -15,12 +15,6 @@ const { expect, assert } = chai;
 
 describe("Grant", () => {
 
-  const GrantStatus = {
-    INIT:     0,
-    SUCCESS:  1,
-    DONE:     2
-  }
-
   async function fixture(provider: any, wallets: Wallet[]) {
 
     const currentTime = (await provider.getBlock(await provider.getBlockNumber())).timestamp;
@@ -83,8 +77,7 @@ describe("Grant", () => {
     let _grantFromDonorWithEther: Contract;
     let _donorAddress: string;
     let _provider: any;
-    let _granteeWallet: Wallet;
-
+    let _donorWallet: Wallet;
     let _token: Contract;
       
 
@@ -93,7 +86,6 @@ describe("Grant", () => {
         grantFromDonor,
         grantFromDonorWithEther,
         token,
-        granteeWallet,
         donorWallet,
         provider,
         
@@ -101,13 +93,11 @@ describe("Grant", () => {
       _donorAddress = donorWallet.address;
       _grantFromDonorWithEther = grantFromDonorWithEther;
       _provider = provider;
-      _granteeWallet = granteeWallet;
+      _grantFromDonor = grantFromDonor;
+      _token = token;
+      _provider = provider;
+      _donorWallet = donorWallet;
 
-
-        _grantFromDonor = grantFromDonor;
-        _token = token;
-        _provider = provider;
-        _granteeWallet = granteeWallet;
     });
 
     describe("When Ether", () => {
@@ -131,42 +121,20 @@ describe("Grant", () => {
         expect(endingBalance).to.eq(startingBalance.sub(receipt.gasUsed));
       });
 
-      describe.skip("After funding success", () => {
+      describe("After funding again with Ether", () => {
         before(async () => {
-          await _grantFromDonorWithEther.fund(10, { value: 10, gasPrice: 1 });
+          await _donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: 1e6 });
         });
 
         it("should revert", async () => {
           await expect(_grantFromDonorWithEther.signal(_positiveSupport, 1e6, { value: 1e6 }))
-            .to.be.revertedWith("signal::Status Error. Must be GrantStatus.INIT to signal.00");
+            .to.be.revertedWith('signal::Status Error. Funding target reached');
         });
-
       });
     });
 
     describe("When Token", () => {
-      // let _grantFromDonor: Contract;
-      // let _token: Contract;
-      // let _donorAddress: string;
-      // let _provider: any;
-      // let _granteeWallet: Wallet;
 
-      // before(async () => {
-      //   const {
-      //     grantFromDonor,
-      //     token,
-      //     donorWallet,
-      //     provider,
-      //     granteeWallet
-      //   } = await waffle.loadFixture(fixture);
-      //   _donorAddress = donorWallet.address;
-      //   _grantFromDonor = grantFromDonor;
-      //   _token = token;
-      //   _provider = provider;
-      //   _granteeWallet = granteeWallet;
-      // });
-
-      
       it("should fail if tokens no approved", async () => {
         await expect(_grantFromDonor.signal(_positiveSupport, 1))
           .to.be.revertedWith("SafeMath: subtraction overflow");
@@ -203,13 +171,6 @@ describe("Grant", () => {
     describe("Fund Grant", () => {
 
       let _managerWallet: Wallet;
-      let _donorWallet: Wallet;
-     // let _grantFromGrantee: Contract;
-      let _grantFromDonor: Contract;
-     // let _token: Contract;
-      let _grantFromManager: Contract;
-      let _provider: any;
-      let _res: any;
   
       describe("With Ether", () => {
   
@@ -217,76 +178,12 @@ describe("Grant", () => {
           const {
             donorWallet,
             managerWallet,
-            grantFromDonorWithEther,
-            grantFromManagerWithEther,
             provider
           } = await waffle.loadFixture(fixture);
   
           _donorWallet = donorWallet;
           _managerWallet = managerWallet;
-          _grantFromDonor = grantFromDonorWithEther;
-          _grantFromManager = grantFromManagerWithEther;
           _provider = provider;
-        });
-  
-        // Pending
-        describe.skip("when refund received", () => {
-         // let _grantFromManager: Contract;
-  
-          before(async () => {
-            const { grantFromManagerWithEther } = await waffle.loadFixture(fixture);
-            _grantFromManager = grantFromManagerWithEther;
-            
-            const transferReceipt = await _donorWallet.sendTransaction({ to: _grantFromManager.address, value: 5000 });
-            console.log("Transfer receipt ", JSON.stringify(transferReceipt));
-            
-            await _grantFromManager.refund(_donorWallet.address);       
-          });
-  
-         // console.log('_grantFromManager '  + _grantFromManager);
-          it("should revert if sender has received a refund", async () => {
-            // Refund approved.
-            let receipt = await expect(_donorWallet.sendTransaction(
-              { to: _grantFromManager.address, value: 5000 }
-            ));
-            //.to.be.reverted;
-
-            console.log("Receipt " + JSON.stringify(receipt));
-            
-            //.to.be.revertedWith("fund::Error. Cannot fund if previously approved for, or received, refund.00");
-            
-            // Refund received.
-           await _grantFromDonor.refund(_donorWallet.address);
-            await expect(_donorWallet.sendTransaction(
-              { to: _grantFromManager.address, value: 5000 }
-            )).to.be.revertedWith("fund::Error. Cannot fund if previously approved for, or received, refund.");
-  
-          });
-        });
-  
-        // Pending
-        describe.skip("when grant can not be funded", () => {
-          let _grantFromDonor: Contract;
-  
-          before(async () => {
-            const { grantFromDonorWithEther } = await waffle.loadFixture(fixture);
-            _grantFromDonor = grantFromDonorWithEther;
-            let receipt = await _donorWallet.sendTransaction(
-              { to: _grantFromDonor.address, value: 10000 }
-            );
-            //console.log("Receipt " + JSON.stringify(receipt));
-            
-            expect(await _grantFromDonor.canFund()).to.be.false;
-            
-            //expect(await _grantFromDonor.grantStatus()).to.be.eq(GrantStatus.SUCCESS);
-          });
-  
-          it("should revert", async () => {
-            await expect(_donorWallet.sendTransaction(
-              { to: _grantFromDonor.address, value: 10000 }
-            )).to.be.revertedWith("fund::Status Error. Must be GrantStatus.INIT to fund.");
-          });
-          
         });
   
         describe("when grant status is cancelled", () => {
@@ -321,14 +218,6 @@ describe("Grant", () => {
               .to.be.revertedWith("cancelGrant::Status Error. Already cancelled.");
           });
 
-
-          // it("should revert", async () => {  Not Done
-        
-          //   await expect(_donorWallet.sendTransaction(
-          //     { to: _grantFromManager.address, value: 10000 }
-          //   )).to.be.revertedWith("fund::Status Error. Must be GrantStatus.INIT to fund.00");
-          // });
-  
         });
 
       });
