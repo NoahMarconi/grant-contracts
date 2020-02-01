@@ -180,7 +180,7 @@ describe("Grant", () => {
 
         await token.approve(grantFromManager.address, 5000);
 
-        // Donor fund Ether
+        // Donor fund Token
         _fundReceipt = await (await _grantFromDonor.fund(_fundAmount)).wait();
         //console.log('fund Receipt ' + JSON.stringify(_fundReceipt)
       });
