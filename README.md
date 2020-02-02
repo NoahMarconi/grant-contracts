@@ -1,13 +1,17 @@
-# grant-contracts
+# Set up guide.
+1. Install NodeJs and NPM.
 
-# ------------------ waffle commands
+2. Run following command to install all dependencies.
+        npm install
 
-# compile and build contracts
-./node_modules/ethereum-waffle/bin/waffle waffle.js
+3. For Compilation and building of the contracts
+        ./node_modules/ethereum-waffle/bin/waffle waffle.js
 
-# run test cases
-1  ./node_modules/ts-mocha/bin/ts-mocha test/<particular-test-case>
-2  ./node_modules/ts-mocha/bin/ts-mocha test/*
+4. For running all test cases.
+        ./node_modules/ts-mocha/bin/ts-mocha test/*
+
+   or running individual test cases.
+        ./node_modules/ts-mocha/bin/ts-mocha test/<test-case-name>
 
 
 # truffle commands
