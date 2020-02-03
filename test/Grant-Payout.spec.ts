@@ -191,7 +191,7 @@ describe("Grant", () => {
           _token = token;
   
         await token.approve(grantFromDonor.address, _targetFunding);
-        await (await _grantFromDonor.fund(_targetFunding)).wait();
+        await _grantFromDonor.fund(_targetFunding);
        
       });
 

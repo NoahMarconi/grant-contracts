@@ -105,12 +105,6 @@ describe("Grant", () => {
           .to.emit(_grantFromDonor, "LogRefund")
           .withArgs(_donorWallet.address, _fundAmount);
       });
-
-      it('should update donor balance', async () => {
-        const { funded, refunded} = await _grantFromManager.donors(_donorWallet.address);
-        expect(funded).to.be.eq(_fundAmount);
-        expect(refunded).to.be.eq(_fundAmount);
-      });
   
       it('should emit LogRefund event', async () => {
         await expect(_grantFromDonor.withdrawRefund(_donorWallet.address))
@@ -129,6 +123,55 @@ describe("Grant", () => {
         expect(totalRefunded).to.eq(_fundAmount);    
       });
   
+    });
+
+    describe('Donor balance', () => {
+      let _grantFromDonor: Contract;
+      const _fundAmount = 500;
+      let _grantFromManager: Contract;
+      let _donorWallet: Wallet;
+      let _token: Contract;
+      let _tokenBalanceAfterFunding: any;
+  
+      before(async () => {
+          const { 
+            token,
+            grantFromDonor,
+            grantFromManager,
+            donorWallet
+          } = await waffle.loadFixture(fixture);
+          
+          _grantFromDonor = grantFromDonor;
+          _grantFromManager = grantFromManager;
+          _donorWallet = donorWallet;
+          _token = token;
+  
+        await token.approve(grantFromDonor.address, 1000);
+        
+        await _grantFromDonor.fund(_fundAmount);
+  
+        _tokenBalanceAfterFunding = await _token.balanceOf(_donorWallet.address);
+      
+      });
+
+      it('should not be updated yet', async () => {
+        const tokenBalance = await _token.balanceOf(_donorWallet.address);
+        expect(_tokenBalanceAfterFunding).to.eq(tokenBalance);
+
+        const {refunded} = await _grantFromManager.donors(_donorWallet.address);
+        expect(refunded).to.eq(0);
+      });
+
+      it('should updated with token after approve withdraw', async () => {
+        await _grantFromManager.approveRefund(_fundAmount, AddressZero);
+        await _grantFromDonor.withdrawRefund(_donorWallet.address);
+
+        const tokenBalanceAfterRefunding = await _token.balanceOf(_donorWallet.address);
+        expect(_tokenBalanceAfterFunding.add(_fundAmount)).to.eq(tokenBalanceAfterRefunding);
+
+        const {refunded} = await _grantFromManager.donors(_donorWallet.address);
+        expect(refunded).to.eq(_fundAmount);
+      });
     });
   
     describe('Approve refunding', () => {
@@ -195,7 +238,7 @@ describe("Grant", () => {
           .to.emit(_grantFromDonor, "LogRefund")
           .withArgs(_donorWallet.address, 0);
 
-        const {funded, refunded} = await _grantFromManager.donors(_donorWallet.address);
+        const {refunded} = await _grantFromManager.donors(_donorWallet.address);
         expect(refunded).to.eq(0);
       });
     
