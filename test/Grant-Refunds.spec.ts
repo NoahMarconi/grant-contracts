@@ -125,55 +125,6 @@ describe("Grant", () => {
   
     });
 
-    describe('Donor balance', () => {
-      let _grantFromDonor: Contract;
-      const _fundAmount = 500;
-      let _grantFromManager: Contract;
-      let _donorWallet: Wallet;
-      let _token: Contract;
-      let _tokenBalanceAfterFunding: any;
-  
-      before(async () => {
-          const { 
-            token,
-            grantFromDonor,
-            grantFromManager,
-            donorWallet
-          } = await waffle.loadFixture(fixture);
-          
-          _grantFromDonor = grantFromDonor;
-          _grantFromManager = grantFromManager;
-          _donorWallet = donorWallet;
-          _token = token;
-  
-        await token.approve(grantFromDonor.address, 1000);
-        
-        await _grantFromDonor.fund(_fundAmount);
-  
-        _tokenBalanceAfterFunding = await _token.balanceOf(_donorWallet.address);
-      
-      });
-
-      it('should not be updated yet', async () => {
-        const tokenBalance = await _token.balanceOf(_donorWallet.address);
-        expect(_tokenBalanceAfterFunding).to.eq(tokenBalance);
-
-        const {refunded} = await _grantFromManager.donors(_donorWallet.address);
-        expect(refunded).to.eq(0);
-      });
-
-      it('should updated with token after approve withdraw', async () => {
-        await _grantFromManager.approveRefund(_fundAmount, AddressZero);
-        await _grantFromDonor.withdrawRefund(_donorWallet.address);
-
-        const tokenBalanceAfterRefunding = await _token.balanceOf(_donorWallet.address);
-        expect(_tokenBalanceAfterFunding.add(_fundAmount)).to.eq(tokenBalanceAfterRefunding);
-
-        const {refunded} = await _grantFromManager.donors(_donorWallet.address);
-        expect(refunded).to.eq(_fundAmount);
-      });
-    });
-  
     describe('Approve refunding', () => {
       let _grantFromDonor: Contract;
       const _fundAmount = 500;
@@ -244,41 +195,106 @@ describe("Grant", () => {
     
     });
     
+    describe('Donor balance', () => {
+      let _grantFromDonor: Contract;
+      const _fundAmount = 500;
+      let _grantFromManager: Contract;
+      let _donorWallet: Wallet;
+      let _token: Contract;
+      let _tokenBalanceAfterFunding: any;
+  
+      before(async () => {
+          const { 
+            token,
+            grantFromDonor,
+            grantFromManager,
+            donorWallet
+          } = await waffle.loadFixture(fixture);
+          
+          _grantFromDonor = grantFromDonor;
+          _grantFromManager = grantFromManager;
+          _donorWallet = donorWallet;
+          _token = token;
+  
+        await token.approve(grantFromDonor.address, 1000);
+        
+        await _grantFromDonor.fund(_fundAmount);
+  
+        _tokenBalanceAfterFunding = await _token.balanceOf(_donorWallet.address);
+      
+      });
+
+      it('should not be updated yet', async () => {
+        const tokenBalance = await _token.balanceOf(_donorWallet.address);
+        expect(_tokenBalanceAfterFunding).to.eq(tokenBalance);
+
+        const {refunded} = await _grantFromManager.donors(_donorWallet.address);
+        expect(refunded).to.eq(0);
+      });
+
+      it('should updated with token after approve withdraw', async () => {
+        await _grantFromManager.approveRefund(_fundAmount, AddressZero);
+        await _grantFromDonor.withdrawRefund(_donorWallet.address);
+
+        const tokenBalanceAfterRefunding = await _token.balanceOf(_donorWallet.address);
+        expect(_tokenBalanceAfterFunding.add(_fundAmount)).to.eq(tokenBalanceAfterRefunding);
+
+        const {refunded} = await _grantFromManager.donors(_donorWallet.address);
+        expect(refunded).to.eq(_fundAmount);
+      });
+    });
+
   });
 
   describe('Ether', () => {
-    describe('Withdraw Refunding', () => {
+    describe('Donor balance', () => {
       let _grantFromDonorWithEther: Contract;
-      const _fundAmount = 500;
+      const _fundAmount = 1e3;
       let _grantFromManagerWithEther: Contract;
       let _donorWallet: Wallet;
+      let _provider: any;
+      let _initialEtherBalance: any;
   
       before(async () => {
         const {
           grantFromDonorWithEther,
           grantFromManagerWithEther,
-          donorWallet
+          donorWallet,
+          provider
         } = await waffle.loadFixture(fixture);
           
         _grantFromDonorWithEther = grantFromDonorWithEther;
         _grantFromManagerWithEther = grantFromManagerWithEther;
         _donorWallet = donorWallet;
+        _provider = provider;
+
+        // _initialEtherBalance = await _provider.getBalance(_donorWallet.address);
+        // console.log(`1. balance ${_initialEtherBalance}`);
         
         await donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: 1e6 });
   
+        _initialEtherBalance = await _provider.getBalance(_donorWallet.address);
+        //console.log(`1. balance ${_initialEtherBalance}`);
+      });
+
+      
+      it('should not be updated yet', async () => {
+        const etherBalance = await _provider.getBalance(_donorWallet.address);
+        expect(_initialEtherBalance).to.eq(etherBalance);
+
+        const {refunded} = await _grantFromManagerWithEther.donors(_donorWallet.address);
+        expect(refunded).to.eq(0);
+      });
+
+      it('should updated with token after approve withdraw', async () => {
         await _grantFromManagerWithEther.approveRefund(_fundAmount, AddressZero);
-
         await _grantFromManagerWithEther.withdrawRefund(_donorWallet.address);
-       
-      });
 
-      it('should update total refunded of Grant', async () => {
-        const totalRefunded = await _grantFromManagerWithEther.totalRefunded();
-        expect(totalRefunded).to.eq(_fundAmount);
-      });
+        const etherBalanceAfterRefunding = await _provider.getBalance(_donorWallet.address);
+        // console.log(`balance ${etherBalanceAfterRefunding}`);
+        //expect(_initialEtherBalance.add(_fundAmount)).to.eq(etherBalanceAfterRefunding);
 
-      it(`should update donor's refunded balance`, async () => {
-        const {funded, refunded} = await _grantFromManagerWithEther.donors(_donorWallet.address);
+        const {refunded} = await _grantFromManagerWithEther.donors(_donorWallet.address);
         expect(refunded).to.eq(_fundAmount);
       });
 
