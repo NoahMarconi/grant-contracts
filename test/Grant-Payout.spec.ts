@@ -130,7 +130,7 @@ describe("Grant", () => {
           .to.be.revertedWith('approvePayout::Invalid Argument. value cannot exceed remaining allocation.');
       });
 
-      it('should revert if sender does not match grantee', async () => {
+      it('should revert if address does not belongs to grantee', async () => {
         await expect(_grantFromManager.approvePayout(_payoutAmount, _unknownWallet.address))
           .to.be.revertedWith('approvePayout::Invalid Argument. value cannot exceed remaining allocation.');
       });

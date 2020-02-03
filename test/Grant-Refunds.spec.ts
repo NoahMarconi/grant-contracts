@@ -15,28 +15,30 @@ const { expect, assert } = chai;
 
 describe("Grant", () => {
 
+  let _amounts = [1000];
+  let _targetFunding = _amounts.reduce((a, b) => a + b, 0);
+
   async function fixture(provider: any, wallets: Wallet[]) {
 
     const currentTime = (await provider.getBlock(await provider.getBlockNumber())).timestamp;
-    const [granteeWallet, donorWallet, managerWallet, secondDonorWallet] = wallets;
+    const [granteeWallet, donorWallet, managerWallet, secondDonorWallet, unknownWallet] = wallets;
     const token: Contract = await waffle.deployContract(donorWallet, GrantToken, ["Grant Token", "GT", 18]);
     const grantWithToken: Contract = await waffle.deployContract(
       granteeWallet,
       Grant,
-      [[granteeWallet.address], [1000], managerWallet.address, token.address, 1000, currentTime + 86400, currentTime + (86400 * 2)],
+      [[granteeWallet.address], _amounts, managerWallet.address, token.address, _targetFunding, currentTime + 86400, currentTime + (86400 * 2)],
       { gasLimit: 6e6 }
     );
     const grantWithEther: Contract = await waffle.deployContract(
       granteeWallet,
       Grant,
-      [[granteeWallet.address], [1000], managerWallet.address, AddressZero, 1000, currentTime + 86400, currentTime + (86400 * 2)],
+      [[granteeWallet.address], _amounts, managerWallet.address, AddressZero, _targetFunding, currentTime + 86400, currentTime + (86400 * 2)],
       { gasLimit: 6e6 }
     );
     const grantFactory: Contract = await waffle.deployContract(donorWallet, GrantFactory, undefined, { gasLimit: 6e6 });
 
     // Initial token balance.
     await token.mint(donorWallet.address, 1e6);
-    //await token.mint(secondDonorWallet.address, 1e6);
 
     const grantFromDonor: Contract = new Contract(grantWithToken.address, Grant.abi, donorWallet);
     const grantFromDonorWithEther: Contract = new Contract(grantWithEther.address, Grant.abi, donorWallet);
@@ -59,18 +61,17 @@ describe("Grant", () => {
       contractExpiration: currentTime + (86400 * 2),
       provider,
       secondDonorWallet,
+      unknownWallet,
     };
   }
 
   describe("Token", () => {
     describe('Refunding', () => {
-      // variables
       let _grantFromDonor: Contract;
       const _fundAmount = 500;
-      let _fundReceipt: any;
       let _grantFromManager: Contract;
       let _donorWallet: Wallet;
-      let _secondDonorWallet: Wallet;
+      let _unknownWallet: Wallet;
   
       before(async () => {
           const { 
@@ -78,39 +79,20 @@ describe("Grant", () => {
             grantFromDonor,
             grantFromManager,
             donorWallet,
-            secondDonorWallet,
+            unknownWallet
           } = await waffle.loadFixture(fixture);
           
           _grantFromDonor = grantFromDonor;
           _grantFromManager = grantFromManager;
           _donorWallet = donorWallet;
-          _secondDonorWallet = secondDonorWallet;
+          _unknownWallet = unknownWallet;
   
         await token.approve(grantFromDonor.address, 1000);
         
-        _fundReceipt = await (await _grantFromDonor.fund(_fundAmount)).wait();
-  
-        //console.log('Fund Receipt ' + JSON.stringify(_fundReceipt));
-          
-          
-       // let totalRefunded = await _grantFromDonor.totalRefunded();
-       // console.log('1. total Refunded ' + totalRefunded);
+        await _grantFromDonor.fund(_fundAmount);
   
         await _grantFromManager.approveRefund(_fundAmount, AddressZero);
        
-        // let totalFunding = await _grantFromDonor.totalFunding();
-        // console.log('totalFunding ' + totalFunding);
-  
-        // totalRefunded = await _grantFromDonor.totalRefunded();
-        // console.log('2. total Refunded ' + totalRefunded);
-  
-        // await _grantFromDonor.withdrawRefund(_donorWallet.address);
-  
-        // await _grantFromDonor.withdrawRefund(_donorWallet.address);
-        
-        // let { funded, refunded } = await _grantFromManager.donors(_donorWallet.address);
-  
-        // console.log('funded ' + funded + ', refunded ' + refunded);
       });
 
       it('should update Total Refund', async () => {
@@ -130,36 +112,39 @@ describe("Grant", () => {
         expect(refunded).to.be.eq(_fundAmount);
       });
   
-      it('Donor again withdraw the fund with amount 0', async () => {
+      it('should emit LogRefund event', async () => {
         await expect(_grantFromDonor.withdrawRefund(_donorWallet.address))
           .to.emit(_grantFromDonor, "LogRefund")
           .withArgs(_donorWallet.address, 0);
       });
   
-      it('Approve-refund should revert if amount > availableBalance', async () => {
-        await expect(_grantFromManager.approveRefund(_fundAmount, AddressZero))
-          .to.be.revertedWith('approveRefund::Invalid Argument. Amount is greater than Available Balance.');
+      it('should send 0 token if address does not belong to donor', async () => {
+        await expect(_grantFromDonor.withdrawRefund(_unknownWallet.address))
+          .to.emit(_grantFromDonor, "LogRefund")
+          .withArgs(_unknownWallet.address, 0);
       });
-  
-      //it.skip("should handle correct dilution for payout -> refund -> payout -> refund -> refund");
-      // describe("when donor initiated", () => {
-      //   it("should set status to DONE");
-      //   it("should set refundCheckpoint");
-      // });
+
+      it('should update total refunded of Grant', async () => {
+        const totalRefunded = await _grantFromManager.totalRefunded();
+        expect(totalRefunded).to.eq(_fundAmount);    
+      });
   
     });
   
     describe('Approve refunding', () => {
       let _grantFromDonor: Contract;
       const _fundAmount = 500;
+      let _grantFromManager: Contract;
 
       before(async () => {
           const { 
             token,
             grantFromDonor,
+            grantFromManager,
           } = await waffle.loadFixture(fixture);
           _grantFromDonor = grantFromDonor;
-  
+          _grantFromManager = grantFromManager;
+
         await token.approve(grantFromDonor.address, 1000);      
         await _grantFromDonor.fund(_fundAmount);
       });
@@ -168,7 +153,92 @@ describe("Grant", () => {
         await expect(_grantFromDonor.approveRefund(_fundAmount, AddressZero))
           .to.be.revertedWith('onlyManager::Permission Error. Function can only be called by manager.');
       });
+
+      it('should revert if amount > availableBalance', async () => {
+        await expect(_grantFromManager.approveRefund(_fundAmount + 1, AddressZero))
+          .to.be.revertedWith('approveRefund::Invalid Argument. Amount is greater than Available Balance.');
+      });
   
+    });
+
+    describe('When approve refunding not done by manager', () => {
+      let _grantFromDonor: Contract;
+      const _fundAmount = 500;
+      let _grantFromManager: Contract;
+      let _donorWallet: Wallet;
+  
+      before(async () => {
+          const { 
+            token,
+            grantFromDonor,
+            grantFromManager,
+            donorWallet,
+          } = await waffle.loadFixture(fixture);
+          
+          _grantFromDonor = grantFromDonor;
+          _grantFromManager = grantFromManager;
+          _donorWallet = donorWallet;
+  
+        await token.approve(grantFromDonor.address, 1000);
+        
+        await _grantFromDonor.fund(_fundAmount);
+
+      });
+
+      it('then total refunded should be zero', async () => {
+        const totalRefunded = await _grantFromManager.totalRefunded();
+        expect(totalRefunded).to.eq(0);
+      });
+
+      it('then refund to donor should be zero', async () => {
+        await expect(_grantFromDonor.withdrawRefund(_donorWallet.address))
+          .to.emit(_grantFromDonor, "LogRefund")
+          .withArgs(_donorWallet.address, 0);
+
+        const {funded, refunded} = await _grantFromManager.donors(_donorWallet.address);
+        expect(refunded).to.eq(0);
+      });
+    
+    });
+    
+  });
+
+  describe('Ether', () => {
+    describe('Withdraw Refunding', () => {
+      let _grantFromDonorWithEther: Contract;
+      const _fundAmount = 500;
+      let _grantFromManagerWithEther: Contract;
+      let _donorWallet: Wallet;
+  
+      before(async () => {
+        const {
+          grantFromDonorWithEther,
+          grantFromManagerWithEther,
+          donorWallet
+        } = await waffle.loadFixture(fixture);
+          
+        _grantFromDonorWithEther = grantFromDonorWithEther;
+        _grantFromManagerWithEther = grantFromManagerWithEther;
+        _donorWallet = donorWallet;
+        
+        await donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: 1e6 });
+  
+        await _grantFromManagerWithEther.approveRefund(_fundAmount, AddressZero);
+
+        await _grantFromManagerWithEther.withdrawRefund(_donorWallet.address);
+       
+      });
+
+      it('should update total refunded of Grant', async () => {
+        const totalRefunded = await _grantFromManagerWithEther.totalRefunded();
+        expect(totalRefunded).to.eq(_fundAmount);
+      });
+
+      it(`should update donor's refunded balance`, async () => {
+        const {funded, refunded} = await _grantFromManagerWithEther.donors(_donorWallet.address);
+        expect(refunded).to.eq(_fundAmount);
+      });
+
     });
 
   });
