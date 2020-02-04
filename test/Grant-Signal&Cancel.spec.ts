@@ -13,6 +13,9 @@ chai.use(waffle.solidity);
 const { expect, assert } = chai;
 
 describe("Grant", () => {
+  const _amounts = [1000];
+  const _targetFunding = _amounts.reduce((a, b) => a + b, 0);
+
   async function fixture(provider: any, wallets: Wallet[]) {
     const currentTime = (
       await provider.getBlock(await provider.getBlockNumber())
@@ -29,10 +32,10 @@ describe("Grant", () => {
       Grant,
       [
         [granteeWallet.address],
-        [1000],
+        _amounts,
         managerWallet.address,
         token.address,
-        1000,
+        _targetFunding,
         currentTime + 86400,
         currentTime + 86400 * 2
       ],
@@ -44,10 +47,10 @@ describe("Grant", () => {
       Grant,
       [
         [granteeWallet.address],
-        [1000],
+        _amounts,
         managerWallet.address,
         AddressZero,
-        1000,
+        _targetFunding,
         currentTime + 86400,
         currentTime + 86400 * 2
       ],
@@ -85,8 +88,6 @@ describe("Grant", () => {
       managerWallet
     );
 
-    //await token.mint(grantFromDonor.address, 1e8);
-
     return {
       grantFactory,
       grantWithToken,
@@ -112,30 +113,38 @@ describe("Grant", () => {
     const _negativeSupport = false;
 
     let _grantFromDonor: Contract;
-    let _grantFromDonorWithEther: Contract;
-    let _donorAddress: string;
-    let _provider: any;
-    let _donorWallet: Wallet;
-    let _token: Contract;
+    const _fundAmount = _targetFunding;
 
     before(async () => {
-      const {
-        grantFromDonor,
-        grantFromDonorWithEther,
-        token,
-        donorWallet,
-        provider
-      } = await waffle.loadFixture(fixture);
-      _donorAddress = donorWallet.address;
-      _grantFromDonorWithEther = grantFromDonorWithEther;
-      _provider = provider;
+      const { grantFromDonor, token } = await waffle.loadFixture(fixture);
       _grantFromDonor = grantFromDonor;
-      _token = token;
-      _provider = provider;
-      _donorWallet = donorWallet;
+
+      await token.approve(grantFromDonor.address, 1e3);
+      await _grantFromDonor.fund(_fundAmount);
     });
 
-    describe("When Ether", () => {
+    it("should revert if total funding = target funding", async () => {
+      await expect(
+        _grantFromDonor.signal(_positiveSupport, 1e3)
+      ).to.be.revertedWith("signal::Status Error. Funding target reached.");
+    });
+
+    describe("With Ether", () => {
+      let _grantFromDonorWithEther: Contract;
+      let _provider: any;
+      let _donorWallet: Wallet;
+
+      before(async () => {
+        const {
+          grantFromDonorWithEther,
+          donorWallet,
+          provider
+        } = await waffle.loadFixture(fixture);
+        _grantFromDonorWithEther = grantFromDonorWithEther;
+        _provider = provider;
+        _donorWallet = donorWallet;
+      });
+
       it("should fail if ether sent does not match value arg", async () => {
         await expect(
           _grantFromDonorWithEther.signal(_positiveSupport, 1e6)
@@ -151,14 +160,17 @@ describe("Grant", () => {
           .to.emit(_grantFromDonorWithEther, "LogSignal")
           .withArgs(
             _positiveSupport,
-            _donorAddress,
+            _donorWallet.address,
             constants.AddressZero,
             1e6
           );
       });
 
-      it("sender should have their funds returned", async () => {
-        const startingBalance = await _provider.getBalance(_donorAddress);
+      it("should returned funds to donor", async () => {
+        const balanceBeforeSignal = await _provider.getBalance(
+          _donorWallet.address
+        );
+
         // Set gas price to 1 to make it simple to calc gas spent in eth.
         const receipt = await (
           await _grantFromDonorWithEther.signal(_positiveSupport, 1e6, {
@@ -166,29 +178,31 @@ describe("Grant", () => {
             gasPrice: 1
           })
         ).wait();
-        const endingBalance = await _provider.getBalance(_donorAddress);
-        expect(endingBalance).to.eq(startingBalance.sub(receipt.gasUsed));
-      });
 
-      describe("After funding again with Ether", () => {
-        before(async () => {
-          await _donorWallet.sendTransaction({
-            to: _grantFromDonorWithEther.address,
-            value: 1e6
-          });
-        });
+        const balanceAfterSignal = await _provider.getBalance(
+          _donorWallet.address
+        );
 
-        it("should revert", async () => {
-          await expect(
-            _grantFromDonorWithEther.signal(_positiveSupport, 1e6, {
-              value: 1e6
-            })
-          ).to.be.revertedWith("signal::Status Error. Funding target reached");
-        });
+        expect(balanceAfterSignal).to.eq(
+          balanceBeforeSignal.sub(receipt.gasUsed)
+        );
       });
     });
 
-    describe("When Token", () => {
+    describe("With Token", () => {
+      let _grantFromDonor: Contract;
+      let _donorWallet: Wallet;
+      let _token: Contract;
+
+      before(async () => {
+        const { grantFromDonor, token, donorWallet } = await waffle.loadFixture(
+          fixture
+        );
+        _grantFromDonor = grantFromDonor;
+        _token = token;
+        _donorWallet = donorWallet;
+      });
+
       it("should fail if tokens no approved", async () => {
         await expect(
           _grantFromDonor.signal(_positiveSupport, 1)
@@ -211,13 +225,23 @@ describe("Grant", () => {
         it("should emit LogSignal event", async () => {
           await expect(_grantFromDonor.signal(_positiveSupport, 1e6))
             .to.emit(_grantFromDonor, "LogSignal")
-            .withArgs(_positiveSupport, _donorAddress, _token.address, 1e6);
+            .withArgs(
+              _positiveSupport,
+              _donorWallet.address,
+              _token.address,
+              1e6
+            );
         });
 
         it("sender should have their funds returned", async () => {
+          const balanceBeforeSignal = await _token.balanceOf(
+            _donorWallet.address
+          );
           await _grantFromDonor.signal(_positiveSupport, 1e6);
-          const endingBalance = await _token.balanceOf(_donorAddress);
-          expect(endingBalance).to.eq(1e6);
+          const balanceAfterSignal = await _token.balanceOf(
+            _donorWallet.address
+          );
+          expect(balanceBeforeSignal).to.eq(balanceAfterSignal);
         });
       });
     });
@@ -310,7 +334,6 @@ describe("Grant", () => {
     });
 
     describe("With Token", () => {
-      let _donorWallet: Wallet;
       let _granteeWallet: Wallet;
       let _grantFromManager: Contract;
       let _grantFromDonor: Contract;
@@ -319,12 +342,10 @@ describe("Grant", () => {
       before(async () => {
         const {
           token,
-          donorWallet,
           granteeWallet,
           grantFromManager,
           grantFromDonor
         } = await waffle.loadFixture(fixture);
-        _donorWallet = donorWallet;
         _grantFromDonor = grantFromDonor;
         _grantFromManager = grantFromManager;
         _granteeWallet = granteeWallet;
@@ -373,11 +394,9 @@ describe("Grant", () => {
           _grantFromManager = grantFromManager;
           _granteeWallet = granteeWallet;
 
-          await token.approve(grantFromDonor.address, 1000);
-
+          await token.approve(grantFromDonor.address, 1e6);
           // funded by donor
           await _grantFromDonor.fund(_fundAmount);
-
           // Cancel Grant
           await _grantFromManager.cancelGrant();
         });

@@ -15,8 +15,8 @@ const { expect, assert } = chai;
 
 describe("Grant", () => {
 
-  let _amounts = [1000];
-  let _targetFunding = _amounts.reduce((a, b) => a + b, 0);
+  const _amounts = [1000];
+  const _targetFunding = _amounts.reduce((a, b) => a + b, 0);
 
   async function fixture(provider: any, wallets: Wallet[]) {
 
