@@ -583,7 +583,7 @@ describe("Grant", () => {
         );
       });
 
-      it("should update balances of donor and Grant on payout to multiple grantee", async () => {
+      it("should update balances of grantees and Grant on payout to multiple grantee", async () => {
         const balanceBeforePayoutForGrant = await _token.balanceOf(
           _grantFromManager.address
         );
@@ -665,8 +665,13 @@ describe("Grant", () => {
         );
 
         console.log(
-          `balanceBeforeFundForDonor ${balanceBeforeFundForDonor}, balanceAfterFundForDonor ${balanceAfterFundForDonor}`
+          `For donor, balanceBeforeFundForDonor ${balanceBeforeFundForDonor}, balanceAfterFundForDonor ${balanceAfterFundForDonor}`
         );
+
+        expect(balanceBeforeFundForDonor.add(DONOR_FUNDING - change)).to.eq(
+          balanceAfterFundForDonor
+        );
+
         console.log(
           `For Grant - balanceBeforeFund ${balanceBeforeFundForGrant}, balanceAfterFund ${balanceAfterFundForGrant}`
         );
@@ -676,7 +681,42 @@ describe("Grant", () => {
         );
       });
 
-      it("should be refunded to donor again");
+      it("should update balance of donor and grant on withdraw refund to first donor", async () => {
+        // const _PARTIAL_REFUND_AMOUNT = 5e2;
+        const _REFUND_AMOUNT = 1e3;
+
+        const balanceBeforeRefundForGrant = await _token.balanceOf(
+          _grantFromManager.address
+        );
+
+        // refunding by first donor and balance calculations
+        let balanceBeforeRefundForDonor = await _token.balanceOf(
+          _donorWallet.address
+        );
+        await _grantFromDonor.withdrawRefund(_donorWallet.address);
+        let balanceAfterRefundForDonor = await _token.balanceOf(
+          _donorWallet.address
+        );
+        // expect(balanceBeforeRefundForDonor.add(_REFUND_AMOUNT)).to.eq(
+        //   balanceAfterRefundForDonor
+        // );
+
+        console.log(
+          `balance before ${balanceBeforeRefundForDonor},  after ${balanceAfterRefundForDonor}`
+        );
+
+        const balanceAfterRefundForGrant = await _token.balanceOf(
+          _grantFromManager.address
+        );
+
+        console.log(
+          `balanceBeforeRefundForGrant ${balanceBeforeRefundForGrant},  balanceAfterRefundForGrant ${balanceAfterRefundForGrant}`
+        );
+
+        expect(balanceBeforeRefundForGrant.sub(_REFUND_AMOUNT)).to.eq(
+          balanceAfterRefundForGrant
+        );
+      });
     });
   });
 });
