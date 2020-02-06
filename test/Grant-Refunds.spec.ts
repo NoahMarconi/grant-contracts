@@ -456,8 +456,7 @@ describe("Grant", () => {
         managerWallet,
         fundingExpiration: currentTime + 86400,
         contractExpiration: currentTime + 86400 * 2,
-        provider,
-        GRANTEE_ADDRESSES
+        provider
       };
     }
 
@@ -472,8 +471,6 @@ describe("Grant", () => {
         _granteeWallet: Wallet,
         _secondGranteeWallet: Wallet;
 
-      let _GRANTEE_ADDRESSES: string[];
-
       before(async () => {
         const {
           token,
@@ -484,8 +481,7 @@ describe("Grant", () => {
           donorWallet,
           secondDonorWallet,
           granteeWallet,
-          secondGranteeWallet,
-          GRANTEE_ADDRESSES
+          secondGranteeWallet
         } = await waffle.loadFixture(fixtureForMoreDonors);
 
         _grantFromDonor = grantFromDonor;
@@ -496,7 +492,6 @@ describe("Grant", () => {
         _granteeWallet = granteeWallet;
         _secondGranteeWallet = secondGranteeWallet;
         _token = token;
-        _GRANTEE_ADDRESSES = GRANTEE_ADDRESSES;
 
         await token.approve(grantFromDonor.address, 1e6);
         await tokenFromSecondDonor.approve(grantFromSecondDonor.address, 1e6);
@@ -627,21 +622,21 @@ describe("Grant", () => {
 
         const totalFunding = await _grantFromManager.totalFunding();
         const totalRefunded = await _grantFromManager.totalRefunded();
-        console.log(
-          `totalFunding ${totalFunding}, targetFunding ${TARGET_FUNDING}, totalRefunded ${totalRefunded}`
-        );
+        // console.log(
+        //   `totalFunding ${totalFunding}, targetFunding ${TARGET_FUNDING}, totalRefunded ${totalRefunded}`
+        // );
 
         let newTotalFunding = totalFunding
           .sub(totalRefunded)
           .add(DONOR_FUNDING);
 
-        const change =
+        const CHANGE =
           newTotalFunding > TARGET_FUNDING
             ? newTotalFunding.sub(TARGET_FUNDING)
             : 0;
-        console.log(
-          `change ${change},  donorFunding - change = ${DONOR_FUNDING - change}`
-        );
+        // console.log(
+        //   `change ${CHANGE},  donorFunding - change = ${DONOR_FUNDING - CHANGE}`
+        // );
 
         const balanceBeforeFundForGrant = await _token.balanceOf(
           _grantFromManager.address
@@ -654,7 +649,12 @@ describe("Grant", () => {
         // funding by donor
         await expect(_grantFromDonor.fund(DONOR_FUNDING))
           .to.emit(_grantFromDonor, "LogFunding")
-          .withArgs(_donorWallet.address, DONOR_FUNDING - change);
+          .withArgs(_donorWallet.address, DONOR_FUNDING - CHANGE);
+
+        // const { funded, refunded } = await _grantFromManager.donors(
+        //   _donorWallet.address
+        // );
+        // console.log(`Funded ${funded}, refunded ${refunded}`);
 
         const balanceAfterFundForGrant = await _token.balanceOf(
           _grantFromManager.address
@@ -664,19 +664,19 @@ describe("Grant", () => {
           _donorWallet.address
         );
 
-        console.log(
-          `For donor, balanceBeforeFundForDonor ${balanceBeforeFundForDonor}, balanceAfterFundForDonor ${balanceAfterFundForDonor}`
-        );
+        // console.log(
+        //   `For donor, balanceBeforeFundForDonor ${balanceBeforeFundForDonor}, balanceAfterFundForDonor ${balanceAfterFundForDonor}`
+        // );
 
-        expect(balanceBeforeFundForDonor.add(DONOR_FUNDING - change)).to.eq(
+        expect(balanceBeforeFundForDonor.sub(DONOR_FUNDING - CHANGE)).to.eq(
           balanceAfterFundForDonor
         );
 
-        console.log(
-          `For Grant - balanceBeforeFund ${balanceBeforeFundForGrant}, balanceAfterFund ${balanceAfterFundForGrant}`
-        );
+        // console.log(
+        //   `For Grant - balanceBeforeFund ${balanceBeforeFundForGrant}, balanceAfterFund ${balanceAfterFundForGrant}`
+        // );
 
-        expect(balanceBeforeFundForGrant.add(DONOR_FUNDING - change)).to.eq(
+        expect(balanceBeforeFundForGrant.add(DONOR_FUNDING - CHANGE)).to.eq(
           balanceAfterFundForGrant
         );
       });
@@ -702,7 +702,7 @@ describe("Grant", () => {
         // );
 
         console.log(
-          `balance before ${balanceBeforeRefundForDonor},  after ${balanceAfterRefundForDonor}`
+          `For Donor - balance before ${balanceBeforeRefundForDonor},  after ${balanceAfterRefundForDonor}`
         );
 
         const balanceAfterRefundForGrant = await _token.balanceOf(
@@ -710,7 +710,7 @@ describe("Grant", () => {
         );
 
         console.log(
-          `balanceBeforeRefundForGrant ${balanceBeforeRefundForGrant},  balanceAfterRefundForGrant ${balanceAfterRefundForGrant}`
+          `For Grant - balanceBeforeRefund ${balanceBeforeRefundForGrant},  balanceAfterRefunds ${balanceAfterRefundForGrant}`
         );
 
         expect(balanceBeforeRefundForGrant.sub(_REFUND_AMOUNT)).to.eq(
