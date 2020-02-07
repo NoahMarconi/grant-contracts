@@ -272,8 +272,8 @@ describe("Grant", () => {
     describe("Grantee balance", () => {
       let _grantFromDonorWithEther: Contract;
       let _grantFromManagerWithEther: Contract;
-      const _fundAmount = 500;
-      const _payoutAmount = _fundAmount;
+      const _fundAmount = 5e2;
+      const _payoutAmount = _fundAmount / 2;
       let _donorWallet: Wallet;
       let _granteeWallet: Wallet;
       let _provider: any;
@@ -294,20 +294,11 @@ describe("Grant", () => {
         _grantFromManagerWithEther = grantFromManagerWithEther;
         _provider = provider;
 
-        let totalFunding = await _grantFromDonorWithEther.totalFunding();
-        let targetFunding = await _grantFromDonorWithEther.targetFunding();
-        // console.log(`1. total funding ${totalFunding},  target funding ${targetFunding}`);
-
         // Donor fund Ether
         await _donorWallet.sendTransaction({
           to: _grantFromDonorWithEther.address,
           value: 1e6
         });
-        // await _grantFromDonorWithEther.fund(_targetFunding);
-
-        totalFunding = await _grantFromDonorWithEther.totalFunding();
-        targetFunding = await _grantFromDonorWithEther.targetFunding();
-        // console.log(`2. total funding ${totalFunding},  target funding ${targetFunding}`);
 
         _initialEtherBalance = await _provider.getBalance(
           _granteeWallet.address
@@ -315,45 +306,30 @@ describe("Grant", () => {
       });
 
       it("should not be updated yet", async () => {
-        // let etherBalance = await _provider.getBalance(_granteeWallet.address);
-        // console.log(`ether balance ${etherBalance}`);
+        const etherBalance = await _provider.getBalance(_granteeWallet.address);
+        expect(_initialEtherBalance).eq(etherBalance);
 
-        const {
-          targetFunding,
-          totalPayed,
-          payoutApproved
-        } = await _grantFromManagerWithEther.grantees(_granteeWallet.address);
+        const { totalPayed } = await _grantFromManagerWithEther.grantees(
+          _granteeWallet.address
+        );
         expect(0).to.eq(totalPayed);
       });
 
       it("should updated with ether after approve payout", async () => {
-        let etherBalance = await _provider.getBalance(_granteeWallet.address);
-        //console.log(`1. ether balance ${etherBalance}`);
-
-        // const {targetFunding, totalPayed, payoutApproved}
-        //  = await _grantFromManagerWithEther.grantees(_granteeWallet.address);
-        //  console.log(`target funding ${targetFunding}, total payed ${totalPayed},
-        //  payout Approved  ${payoutApproved}`);
-
         await _grantFromManagerWithEther.approvePayout(
           _payoutAmount,
           _granteeWallet.address
         );
 
-        etherBalance = await _provider.getBalance(_granteeWallet.address);
-        //console.log(`2. ether balance ${etherBalance}`);
-        //expect(etherBalance - _initialEtherBalance).to.eq(_payoutAmount);
+        const { totalPayed } = await _grantFromManagerWithEther.grantees(
+          _granteeWallet.address
+        );
+        expect(_payoutAmount).eq(totalPayed);
 
-        //const totalPayedOfGrant = await _grantFromManagerWithEther.totalPayed();
-
-        const {
-          targetFunding,
-          totalPayed,
-          payoutApproved
-        } = await _grantFromManagerWithEther.grantees(_granteeWallet.address);
-        // console.log(`target funding ${targetFunding}, total payed ${totalPayed},
-        //     payout Approved  ${payoutApproved}`);
-        expect(_payoutAmount).to.eq(totalPayed);
+        const balanceAfterPayout = await _provider.getBalance(
+          _granteeWallet.address
+        );
+        expect(_initialEtherBalance.add(_payoutAmount)).eq(balanceAfterPayout);
       });
     });
   });
