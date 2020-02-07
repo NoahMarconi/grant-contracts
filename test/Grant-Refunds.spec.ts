@@ -406,7 +406,8 @@ describe("Grant", () => {
   describe("Ether", () => {
     describe("Donor balance", () => {
       let _grantFromDonorWithEther: Contract;
-      const _fundAmount = 1e3;
+      const FUNDING_AMOUNT = 1e3;
+      const REFUND_AMOUNT = FUNDING_AMOUNT / 2;
       let _grantFromManagerWithEther: Contract;
       let _donorWallet: Wallet;
       let _provider: any;
@@ -425,16 +426,12 @@ describe("Grant", () => {
         _donorWallet = donorWallet;
         _provider = provider;
 
-        // _initialEtherBalance = await _provider.getBalance(_donorWallet.address);
-        // console.log(`1. balance ${_initialEtherBalance}`);
-
         await donorWallet.sendTransaction({
           to: _grantFromDonorWithEther.address,
           value: 1e6
         });
 
         _initialEtherBalance = await _provider.getBalance(_donorWallet.address);
-        //console.log(`1. balance ${_initialEtherBalance}`);
       });
 
       it("should not be updated yet", async () => {
@@ -449,21 +446,22 @@ describe("Grant", () => {
 
       it("should updated with ether after approve withdraw", async () => {
         await _grantFromManagerWithEther.approveRefund(
-          _fundAmount,
+          REFUND_AMOUNT,
           AddressZero
         );
         await _grantFromManagerWithEther.withdrawRefund(_donorWallet.address);
 
-        const etherBalanceAfterRefunding = await _provider.getBalance(
-          _donorWallet.address
-        );
-        // console.log(`balance ${etherBalanceAfterRefunding}`);
-        //expect(_initialEtherBalance.add(_fundAmount)).to.eq(etherBalanceAfterRefunding);
-
         const { refunded } = await _grantFromManagerWithEther.donors(
           _donorWallet.address
         );
-        expect(refunded).to.eq(_fundAmount);
+        expect(refunded).to.eq(REFUND_AMOUNT);
+
+        const etherBalanceAfterRefunding = await _provider.getBalance(
+          _donorWallet.address
+        );
+        expect(_initialEtherBalance.add(REFUND_AMOUNT)).to.eq(
+          etherBalanceAfterRefunding
+        );
       });
     });
   });
