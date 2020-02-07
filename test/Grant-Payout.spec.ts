@@ -13,8 +13,8 @@ chai.use(waffle.solidity);
 const { expect, assert } = chai;
 
 describe("Grant", () => {
-  const _amounts = [1000];
-  const _targetFunding = _amounts.reduce((a, b) => a + b, 0);
+  const AMOUNTS = [1000];
+  const TARGET_FUNDING = AMOUNTS.reduce((a, b) => a + b, 0);
 
   async function fixture(provider: any, wallets: Wallet[]) {
     const currentTime = (
@@ -37,10 +37,10 @@ describe("Grant", () => {
       Grant,
       [
         [granteeWallet.address],
-        _amounts,
+        AMOUNTS,
         managerWallet.address,
         token.address,
-        _targetFunding,
+        TARGET_FUNDING,
         currentTime + 86400,
         currentTime + 86400 * 2
       ],
@@ -51,10 +51,10 @@ describe("Grant", () => {
       Grant,
       [
         [granteeWallet.address],
-        [1000],
+        AMOUNTS,
         managerWallet.address,
         AddressZero,
-        1000,
+        TARGET_FUNDING,
         currentTime + 86400,
         currentTime + 86400 * 2
       ],
@@ -117,30 +117,22 @@ describe("Grant", () => {
       const _fundAmount = 500;
       const _payoutAmount = _fundAmount;
       let _grantFromManager: Contract;
-      let _donorWallet: Wallet;
-      let _secondDonorWallet: Wallet;
       let _granteeWallet: Wallet;
       let _unknownWallet: Wallet;
-      let _token: Contract;
 
       before(async () => {
         const {
           token,
           grantFromDonor,
           grantFromManager,
-          donorWallet,
-          secondDonorWallet,
           granteeWallet,
           unknownWallet
         } = await waffle.loadFixture(fixture);
 
         _grantFromDonor = grantFromDonor;
         _grantFromManager = grantFromManager;
-        _donorWallet = donorWallet;
-        _secondDonorWallet = secondDonorWallet;
         _granteeWallet = granteeWallet;
         _unknownWallet = unknownWallet;
-        _token = token;
 
         await token.approve(grantFromDonor.address, 1000);
         await (await _grantFromDonor.fund(_fundAmount)).wait();
@@ -172,13 +164,9 @@ describe("Grant", () => {
       });
 
       it("should revert if value > target funding", async () => {
-        const {
-          targetFunding,
-          totalPayed,
-          payoutApproved
-        } = await _grantFromManager.grantees(_granteeWallet.address);
-        // console.log(`target Funding ${targetFunding}, total Payed ${totalPayed}
-        // , payout Approved ${payoutApproved}`);
+        const { targetFunding } = await _grantFromManager.grantees(
+          _granteeWallet.address
+        );
         await expect(
           _grantFromManager.approvePayout(
             targetFunding + 1,
@@ -208,11 +196,9 @@ describe("Grant", () => {
       it("should update total payed of grantee and Grant", async () => {
         const totalPayedOfGrant = await _grantFromManager.totalPayed();
 
-        const {
-          targetFunding,
-          totalPayed,
-          payoutApproved
-        } = await _grantFromManager.grantees(_granteeWallet.address);
+        const { totalPayed } = await _grantFromManager.grantees(
+          _granteeWallet.address
+        );
 
         expect(totalPayedOfGrant).to.be.eq(totalPayed);
         expect(totalPayed).to.be.eq(_payoutAmount);
@@ -232,13 +218,10 @@ describe("Grant", () => {
 
     describe("Grantee balance", () => {
       let _grantFromDonor: Contract;
-      const _fundAmount = 500;
+      const _fundAmount = 5e2;
       const _payoutAmount = _fundAmount;
       let _grantFromManager: Contract;
-      let _donorWallet: Wallet;
-      let _secondDonorWallet: Wallet;
       let _granteeWallet: Wallet;
-      let _unknownWallet: Wallet;
       let _token: Contract;
 
       before(async () => {
@@ -246,35 +229,25 @@ describe("Grant", () => {
           token,
           grantFromDonor,
           grantFromManager,
-          donorWallet,
-          secondDonorWallet,
-          granteeWallet,
-          unknownWallet
+          granteeWallet
         } = await waffle.loadFixture(fixture);
 
         _grantFromDonor = grantFromDonor;
         _grantFromManager = grantFromManager;
-        _donorWallet = donorWallet;
-        _secondDonorWallet = secondDonorWallet;
         _granteeWallet = granteeWallet;
-        _unknownWallet = unknownWallet;
         _token = token;
 
-        await token.approve(grantFromDonor.address, _targetFunding);
-        await _grantFromDonor.fund(_targetFunding);
+        await token.approve(grantFromDonor.address, TARGET_FUNDING);
+        await _grantFromDonor.fund(TARGET_FUNDING);
       });
 
       it("should not be updated yet", async () => {
         let tokenBalance = await _token.balanceOf(_granteeWallet.address);
         expect(tokenBalance).to.eq(0);
 
-        const {
-          targetFunding,
-          totalPayed,
-          payoutApproved
-        } = await _grantFromManager.grantees(_granteeWallet.address);
-        // console.log(`target funding ${targetFunding}, total payed ${totalPayed},
-        //     payout Approved  ${payoutApproved}`);
+        const { totalPayed } = await _grantFromManager.grantees(
+          _granteeWallet.address
+        );
         expect(0).to.eq(totalPayed);
       });
 
@@ -287,13 +260,9 @@ describe("Grant", () => {
         let tokenBalance = await _token.balanceOf(_granteeWallet.address);
         expect(tokenBalance).to.eq(_payoutAmount);
 
-        const {
-          targetFunding,
-          totalPayed,
-          payoutApproved
-        } = await _grantFromManager.grantees(_granteeWallet.address);
-        // console.log(`target funding ${targetFunding}, total payed ${totalPayed},
-        //     payout Approved  ${payoutApproved}`);
+        const { totalPayed } = await _grantFromManager.grantees(
+          _granteeWallet.address
+        );
         expect(_payoutAmount).to.eq(totalPayed);
       });
     });
