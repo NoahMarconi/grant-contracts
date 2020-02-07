@@ -264,7 +264,7 @@ describe("Grant", () => {
       });
     });
 
-    describe.only("Approve Refund when passing Grantee address as argument", () => {
+    describe("Approve Refund when passing Grantee address as argument", () => {
       let _grantFromDonor: Contract;
       const FUNDING_AMOUNT = 1e3;
       const REFUND_AMOUNT = FUNDING_AMOUNT / 2;
@@ -346,15 +346,14 @@ describe("Grant", () => {
       let _grantFromManager: Contract;
       let _donorWallet: Wallet;
       let _token: Contract;
-      let _tokenBalanceAfterFunding: any;
+      let initialBalanceAfterFunding: any;
 
       before(async () => {
         const {
           token,
           grantFromDonor,
           grantFromManager,
-          donorWallet,
-          granteeWallet
+          donorWallet
         } = await waffle.loadFixture(fixture);
 
         _grantFromDonor = grantFromDonor;
@@ -366,15 +365,17 @@ describe("Grant", () => {
 
         await _grantFromDonor.fund(FUNDING_AMOUNT);
 
-        _tokenBalanceAfterFunding = await _token.balanceOf(
+        initialBalanceAfterFunding = await _token.balanceOf(
           _donorWallet.address
         );
       });
 
       it("should not be updated yet", async () => {
+        // verifying donor's token balance
         const tokenBalance = await _token.balanceOf(_donorWallet.address);
-        expect(_tokenBalanceAfterFunding).to.eq(tokenBalance);
+        expect(initialBalanceAfterFunding).to.eq(tokenBalance);
 
+        // verifying donor's refunded field
         const { refunded } = await _grantFromManager.donors(
           _donorWallet.address
         );
@@ -385,13 +386,15 @@ describe("Grant", () => {
         await _grantFromManager.approveRefund(REFUND_AMOUNT, AddressZero);
         await _grantFromDonor.withdrawRefund(_donorWallet.address);
 
-        const tokenBalanceAfterRefunding = await _token.balanceOf(
+        // verifying donor's token balance
+        const finalBalanceAfterRefunding = await _token.balanceOf(
           _donorWallet.address
         );
-        expect(_tokenBalanceAfterFunding.add(REFUND_AMOUNT)).to.eq(
-          tokenBalanceAfterRefunding
+        expect(initialBalanceAfterFunding.add(REFUND_AMOUNT)).to.eq(
+          finalBalanceAfterRefunding
         );
 
+        // verifying donor's refunded field
         const { refunded } = await _grantFromManager.donors(
           _donorWallet.address
         );
