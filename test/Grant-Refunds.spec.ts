@@ -289,22 +289,18 @@ describe("Grant", () => {
 
       it("should not reduce target funding for grantee", async () => {
         let {
-          targetFunding,
-          totalPayed,
-          payoutApproved
+          targetFunding: targetFundingBeforeApproveFund
         } = await _grantFromManager.grantees(_granteeWallet.address);
 
-        const targetFundingBeforeApproveFund = targetFunding;
+        //  const targetFundingBeforeApproveFund = targetFunding;
 
         await _grantFromManager.approveRefund(REFUND_AMOUNT, AddressZero);
 
         let {
-          targetFunding,
-          totalPayed,
-          payoutApproved
+          targetFunding: targetFundingAfterApproveFund
         } = await _grantFromManager.grantees(_granteeWallet.address);
 
-        const targetFundingAfterApproveFund = targetFunding;
+        //  const targetFundingAfterApproveFund = targetFunding;
 
         expect(targetFundingBeforeApproveFund).to.eq(
           targetFundingAfterApproveFund
@@ -313,12 +309,10 @@ describe("Grant", () => {
 
       it("should reduce target funding for grantee by refund amount", async () => {
         let {
-          targetFunding,
-          totalPayed,
-          payoutApproved
+          targetFunding: targetFundingBeforeApproveFund
         } = await _grantFromManager.grantees(_granteeWallet.address);
 
-        const targetFundingBeforeApproveFund = targetFunding;
+        //  const targetFundingBeforeApproveFund = targetFunding;
 
         await _grantFromManager.approveRefund(
           REFUND_AMOUNT,
@@ -326,12 +320,10 @@ describe("Grant", () => {
         );
 
         let {
-          targetFunding,
-          totalPayed,
-          payoutApproved
+          targetFunding: targetFundingAfterApproveFund
         } = await _grantFromManager.grantees(_granteeWallet.address);
 
-        const targetFundingAfterApproveFund = targetFunding;
+        // const targetFundingAfterApproveFund = targetFunding;
 
         expect(targetFundingBeforeApproveFund).to.eq(
           targetFundingAfterApproveFund.add(REFUND_AMOUNT)
