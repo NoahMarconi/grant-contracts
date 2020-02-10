@@ -437,10 +437,12 @@ describe("Grant", () => {
       let _donorWallet: Wallet;
       let _secondDonorWallet: Wallet;
 
+      let _token: Contract;
       //let _secondGranteeWallet: Wallet;
       let lastFundingAmountByDonor: BigNumber;
       let lastFundingAmountBySecondDonor: BigNumber;
 
+      let lastBalanceOfGrant: BigNumber;
       before(async () => {
         const {
           token,
@@ -452,6 +454,7 @@ describe("Grant", () => {
           secondDonorWallet
         } = await waffle.loadFixture(fixtureWithMultipleGrantee);
 
+        _token = token;
         _grantFromDonor = grantFromDonor;
         _grantFromSecondDonor = grantFromSecondDonor;
         _grantFromManager = grantFromManager;
@@ -476,6 +479,8 @@ describe("Grant", () => {
           _secondDonorWallet.address
         );
         lastFundingAmountBySecondDonor = fundedBySecondDonor;
+
+        lastBalanceOfGrant = await _token.balanceOf(_grantFromDonor.address);
       });
 
       it("should revert with negative funding", async () => {
@@ -487,6 +492,8 @@ describe("Grant", () => {
       });
 
       it("should be updated with initial funding", async () => {
+        const initialBalanceForGrant = lastBalanceOfGrant;
+
         let fundingAmount = 5e2;
 
         // first donor
@@ -511,9 +518,19 @@ describe("Grant", () => {
           fundedBySecondDonor
         );
         lastFundingAmountBySecondDonor = fundedBySecondDonor;
+
+        const finalBalanceOfGrant = await _token.balanceOf(
+          _grantFromDonor.address
+        );
+        lastBalanceOfGrant = finalBalanceOfGrant;
+
+        expect(initialBalanceForGrant.add(5e2).add(250)).to.be.eq(
+          finalBalanceOfGrant
+        );
       });
 
       it("should be updated with final funding", async () => {
+        const initialBalanceForGrant = lastBalanceOfGrant;
         let fundingAmount = 250;
 
         // first donor
@@ -538,6 +555,15 @@ describe("Grant", () => {
           fundedBySecondDonor
         );
         lastFundingAmountBySecondDonor = fundedBySecondDonor;
+
+        const finalBalanceOfGrant = await _token.balanceOf(
+          _grantFromDonor.address
+        );
+        lastBalanceOfGrant = finalBalanceOfGrant;
+
+        expect(initialBalanceForGrant.add(250).add(500)).to.be.eq(
+          finalBalanceOfGrant
+        );
       });
     });
   });
