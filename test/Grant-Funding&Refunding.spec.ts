@@ -3,14 +3,12 @@ import GrantToken from "../build/GrantToken.json";
 import GrantFactory from "../build/GrantFactory.json";
 import chai from "chai";
 import * as waffle from "ethereum-waffle";
-import { Contract, Wallet, constants } from "ethers";
+import { Contract, Wallet } from "ethers";
 import { BigNumber } from "ethers/utils/bignumber";
-import { Web3Provider, Provider } from "ethers/providers";
-import { bigNumberify, randomBytes, solidityKeccak256, id } from "ethers/utils";
 import { AddressZero } from "ethers/constants";
 
 chai.use(waffle.solidity);
-const { expect, assert } = chai;
+const { expect } = chai;
 
 describe("Grant", () => {
   const _amounts = [1000];
@@ -340,6 +338,206 @@ describe("Grant", () => {
         await expect(_grantFromDonor.fund(_fundAmount)).to.be.revertedWith(
           "fund::Status Error. Grant not open to funding."
         );
+      });
+    });
+  });
+
+  describe("For Funding, When multiple donors are involved", () => {
+    const AMOUNTS = [1000, 500];
+    const TARGET_FUNDING = AMOUNTS.reduce((a, b) => a + b, 0);
+
+    async function fixtureWithMultipleGrantee(
+      provider: any,
+      wallets: Wallet[]
+    ) {
+      const currentTime = (
+        await provider.getBlock(await provider.getBlockNumber())
+      ).timestamp;
+
+      const [
+        granteeWallet,
+        secondGranteeWallet,
+        donorWallet,
+        secondDonorWallet,
+        managerWallet,
+        thirdPersonWallet
+      ] = wallets;
+
+      const token: Contract = await waffle.deployContract(
+        donorWallet,
+        GrantToken,
+        ["Grant Token", "GT", 18]
+      );
+
+      const grantWithToken: Contract = await waffle.deployContract(
+        granteeWallet,
+        Grant,
+        [
+          [granteeWallet.address, secondGranteeWallet.address],
+          AMOUNTS,
+          managerWallet.address,
+          token.address,
+          TARGET_FUNDING,
+          currentTime + 86400,
+          currentTime + 86400 * 2
+        ],
+        { gasLimit: 6e6 }
+      );
+
+      // Initial token balance.
+      await token.mint(donorWallet.address, 1e6);
+      await token.mint(secondDonorWallet.address, 1e6);
+
+      const tokenFromSecondDonor: Contract = new Contract(
+        token.address,
+        GrantToken.abi,
+        secondDonorWallet
+      );
+
+      const grantFromDonor: Contract = new Contract(
+        grantWithToken.address,
+        Grant.abi,
+        donorWallet
+      );
+
+      const grantFromSecondDonor: Contract = new Contract(
+        grantWithToken.address,
+        Grant.abi,
+        secondDonorWallet
+      );
+
+      const grantFromManager: Contract = new Contract(
+        grantWithToken.address,
+        Grant.abi,
+        managerWallet
+      );
+
+      return {
+        grantWithToken,
+        grantFromDonor,
+        grantFromSecondDonor,
+        grantFromManager,
+        token,
+        tokenFromSecondDonor,
+        granteeWallet,
+        secondGranteeWallet,
+        donorWallet,
+        secondDonorWallet,
+        managerWallet,
+        thirdPersonWallet,
+        provider
+      };
+    }
+
+    describe("Donors' balance", () => {
+      let _grantFromDonor: Contract;
+      let _grantFromSecondDonor: Contract;
+      let _grantFromManager: Contract;
+      //let _granteeWallet: Wallet;
+      let _donorWallet: Wallet;
+      let _secondDonorWallet: Wallet;
+
+      //let _secondGranteeWallet: Wallet;
+      let lastFundingAmountByDonor: BigNumber;
+      let lastFundingAmountBySecondDonor: BigNumber;
+
+      before(async () => {
+        const {
+          token,
+          tokenFromSecondDonor,
+          grantFromDonor,
+          grantFromSecondDonor,
+          grantFromManager,
+          donorWallet,
+          secondDonorWallet
+        } = await waffle.loadFixture(fixtureWithMultipleGrantee);
+
+        _grantFromDonor = grantFromDonor;
+        _grantFromSecondDonor = grantFromSecondDonor;
+        _grantFromManager = grantFromManager;
+
+        _donorWallet = donorWallet;
+        _secondDonorWallet = secondDonorWallet;
+
+        await token.approve(grantFromDonor.address, TARGET_FUNDING);
+        await tokenFromSecondDonor.approve(
+          grantFromSecondDonor.address,
+          TARGET_FUNDING
+        );
+
+        // first donor
+        let { funded: fundedByDonor } = await _grantFromManager.donors(
+          _donorWallet.address
+        );
+        lastFundingAmountByDonor = fundedByDonor;
+
+        // second donor
+        let { funded: fundedBySecondDonor } = await _grantFromManager.donors(
+          _secondDonorWallet.address
+        );
+        lastFundingAmountBySecondDonor = fundedBySecondDonor;
+      });
+
+      it("should revert with negative funding", async () => {
+        await expect(_grantFromDonor.fund(-1)).to.be.reverted;
+      });
+
+      it("should revert with 0 funding", async () => {
+        await expect(_grantFromDonor.fund(0)).to.be.reverted;
+      });
+
+      it("should be updated with initial funding", async () => {
+        let fundingAmount = 5e2;
+
+        // first donor
+        await _grantFromDonor.fund(fundingAmount);
+        let { funded: fundedByDonor } = await _grantFromManager.donors(
+          _donorWallet.address
+        );
+        expect(lastFundingAmountByDonor.add(fundingAmount)).to.be.eq(
+          fundedByDonor
+        );
+        lastFundingAmountByDonor = fundedByDonor;
+
+        fundingAmount = 250;
+
+        // second donor
+        await _grantFromSecondDonor.fund(fundingAmount);
+
+        let { funded: fundedBySecondDonor } = await _grantFromManager.donors(
+          _secondDonorWallet.address
+        );
+        expect(lastFundingAmountBySecondDonor.add(fundingAmount)).to.be.eq(
+          fundedBySecondDonor
+        );
+        lastFundingAmountBySecondDonor = fundedBySecondDonor;
+      });
+
+      it("should be updated with final funding", async () => {
+        let fundingAmount = 250;
+
+        // first donor
+        await _grantFromDonor.fund(fundingAmount);
+        let { funded: fundedByDonor } = await _grantFromManager.donors(
+          _donorWallet.address
+        );
+        expect(lastFundingAmountByDonor.add(fundingAmount)).to.be.eq(
+          fundedByDonor
+        );
+        lastFundingAmountByDonor = fundedByDonor;
+
+        fundingAmount = 500;
+
+        // second donor
+        await _grantFromSecondDonor.fund(fundingAmount);
+
+        let { funded: fundedBySecondDonor } = await _grantFromManager.donors(
+          _secondDonorWallet.address
+        );
+        expect(lastFundingAmountBySecondDonor.add(fundingAmount)).to.be.eq(
+          fundedBySecondDonor
+        );
+        lastFundingAmountBySecondDonor = fundedBySecondDonor;
       });
     });
   });
