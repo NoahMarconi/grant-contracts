@@ -335,10 +335,6 @@ describe("Grant", () => {
         _lastTotalPayedForSecondGrantee = initialTotalPayedForSecondGrantee;
       });
 
-      it("should revert if approved amount is negative", async () => {
-        await expect(_grantFromManager.approvePayout(-1, _granteeWallet.address)).to.be.reverted;
-      });
-
       it("should revert if approved amount is 0", async () => {
         await expect(_grantFromManager.approvePayout(0, _granteeWallet.address)).to.be.reverted;
       });

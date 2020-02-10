@@ -200,10 +200,6 @@ describe("Grant", () => {
           await token.approve(_grantFromDonor.address, 1e6);
         });
 
-        it("should reject if value is negative", async () => {
-          await expect(_grantFromDonor.signal(_positiveSupport, -1)).to.be.reverted;
-        });
-
         it("should reject if value is 0", async () => {
           await expect(_grantFromDonor.signal(_positiveSupport, 0)).to.be.reverted;
         });

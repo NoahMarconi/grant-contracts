@@ -394,10 +394,6 @@ describe("Grant", () => {
         lastBalanceOfGrant = await _token.balanceOf(_grantFromDonor.address);
       });
 
-      it("should revert with negative funding", async () => {
-        await expect(_grantFromDonor.fund(-1)).to.be.reverted;
-      });
-
       it("should revert with 0 funding", async () => {
         await expect(_grantFromDonor.fund(0)).to.be.reverted;
       });
