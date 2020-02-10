@@ -5,8 +5,6 @@ import chai from "chai";
 import * as waffle from "ethereum-waffle";
 import { Contract, Wallet, constants } from "ethers";
 import { BigNumber } from "ethers/utils/bignumber";
-import { Web3Provider, Provider } from "ethers/providers";
-import { bigNumberify, randomBytes, solidityKeccak256, id } from "ethers/utils";
 import { AddressZero } from "ethers/constants";
 
 chai.use(waffle.solidity);
@@ -139,48 +137,75 @@ describe("Grant", () => {
 
         const balanceAfterSignal = await _provider.getBalance(_donorWallet.address);
 
-        expect(balanceAfterSignal).to.eq(balanceBeforeSignal.sub(receipt.gasUsed));
+        expect(balanceBeforeSignal.sub(receipt.gasUsed)).to.eq(balanceAfterSignal);
       });
     });
 
     describe("With Token", () => {
-      let _grantFromDonor: Contract;
-      let _donorWallet: Wallet;
-      let _token: Contract;
+      describe("With positive value", () => {
+        let _grantFromDonor: Contract;
+        let _donorWallet: Wallet;
+        let _token: Contract;
 
-      before(async () => {
-        const { grantFromDonor, token, donorWallet } = await waffle.loadFixture(fixture);
-        _grantFromDonor = grantFromDonor;
-        _token = token;
-        _donorWallet = donorWallet;
-      });
-
-      it("should fail if tokens no approved", async () => {
-        await expect(_grantFromDonor.signal(_positiveSupport, 1)).to.be.revertedWith("SafeMath: subtraction overflow");
-      });
-
-      describe("When approved", async () => {
-        beforeEach(async () => {
-          await _token.approve(_grantFromDonor.address, 1e6);
+        before(async () => {
+          const { grantFromDonor, token, donorWallet } = await waffle.loadFixture(fixture);
+          _grantFromDonor = grantFromDonor;
+          _token = token;
+          _donorWallet = donorWallet;
+          await token.mint(_donorWallet.address, 1e6);
         });
 
-        it("should reject ether signalling for token funded grants", async () => {
-          await expect(_grantFromDonor.signal(_positiveSupport, 1e6, { value: 1e6 })).to.be.revertedWith(
-            "signal::Currency Error. Cannot send Ether to a token funded grant."
+        it("should fail if tokens no approved", async () => {
+          await expect(_grantFromDonor.signal(_positiveSupport, 1)).to.be.revertedWith(
+            "SafeMath: subtraction overflow"
           );
         });
 
-        it("should emit LogSignal event", async () => {
-          await expect(_grantFromDonor.signal(_positiveSupport, 1e6))
-            .to.emit(_grantFromDonor, "LogSignal")
-            .withArgs(_positiveSupport, _donorWallet.address, _token.address, 1e6);
+        describe("When approved", async () => {
+          const signalValue = 10;
+          before(async () => {
+            await _token.approve(_grantFromDonor.address, 1e6);
+          });
+
+          it("should reject ether signalling for token funded grants", async () => {
+            await expect(
+              _grantFromDonor.signal(_positiveSupport, signalValue, { value: signalValue })
+            ).to.be.revertedWith("signal::Currency Error. Cannot send Ether to a token funded grant.");
+          });
+
+          it("should emit LogSignal event", async () => {
+            await expect(_grantFromDonor.signal(_positiveSupport, signalValue))
+              .to.emit(_grantFromDonor, "LogSignal")
+              .withArgs(_positiveSupport, _donorWallet.address, _token.address, signalValue);
+          });
+
+          it("sender should have their funds returned", async () => {
+            const balanceBeforeSignal = await _token.balanceOf(_donorWallet.address);
+            await _grantFromDonor.signal(_positiveSupport, signalValue);
+            const balanceAfterSignal = await _token.balanceOf(_donorWallet.address);
+            expect(balanceBeforeSignal).to.eq(balanceAfterSignal);
+          });
+        });
+      });
+
+      describe("Without positive value", () => {
+        let _grantFromDonor: Contract;
+
+        before(async () => {
+          const { grantFromDonor, token, donorWallet } = await waffle.loadFixture(fixture);
+          _grantFromDonor = grantFromDonor;
+
+          // Initial token balance.
+          await token.mint(donorWallet.address, 1e6);
+          await token.approve(_grantFromDonor.address, 1e6);
         });
 
-        it("sender should have their funds returned", async () => {
-          const balanceBeforeSignal = await _token.balanceOf(_donorWallet.address);
-          await _grantFromDonor.signal(_positiveSupport, 1e6);
-          const balanceAfterSignal = await _token.balanceOf(_donorWallet.address);
-          expect(balanceBeforeSignal).to.eq(balanceAfterSignal);
+        it("should reject if value is negative", async () => {
+          await expect(_grantFromDonor.signal(_positiveSupport, -1)).to.be.reverted;
+        });
+
+        it("should reject if value is 0", async () => {
+          await expect(_grantFromDonor.signal(_positiveSupport, 0)).to.be.reverted;
         });
       });
     });

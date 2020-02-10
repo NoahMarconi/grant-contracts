@@ -335,6 +335,14 @@ describe("Grant", () => {
         _lastTotalPayedForSecondGrantee = initialTotalPayedForSecondGrantee;
       });
 
+      it("should revert if approved amount is negative", async () => {
+        await expect(_grantFromManager.approvePayout(-1, _granteeWallet.address)).to.be.reverted;
+      });
+
+      it("should revert if approved amount is 0", async () => {
+        await expect(_grantFromManager.approvePayout(0, _granteeWallet.address)).to.be.reverted;
+      });
+
       it("should be updated with initial approved amount", async () => {
         let approveAmount = 5e2;
 
@@ -421,15 +429,6 @@ describe("Grant", () => {
         await expect(_grantFromManager.approvePayout(approveAmount, _secondGranteeWallet.address)).to.be.revertedWith(
           "approvePayout::Invalid Argument. value cannot exceed remaining allocation."
         );
-
-        // let {
-        //   totalPayed: finalTotalPayedForSecondGrantee
-        // } = await _grantFromManager.grantees(_secondGranteeWallet.address);
-
-        // expect(initialTotalPayedForSecondGrantee.add(approveAmount)).to.eq(
-        //   finalTotalPayedForSecondGrantee
-        // );
-        // _lastTotalPayedForSecondGrantee = finalTotalPayedForSecondGrantee;
       });
     });
   });
