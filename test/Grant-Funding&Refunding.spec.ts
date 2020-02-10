@@ -443,6 +443,9 @@ describe("Grant", () => {
       let lastFundingAmountBySecondDonor: BigNumber;
 
       let lastBalanceOfGrant: BigNumber;
+      let lastBalanceOfDonor: BigNumber;
+      let lastBalanceOfSecondDonor: BigNumber;
+
       before(async () => {
         const {
           token,
@@ -473,13 +476,18 @@ describe("Grant", () => {
           _donorWallet.address
         );
         lastFundingAmountByDonor = fundedByDonor;
+        lastBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
 
         // second donor
         let { funded: fundedBySecondDonor } = await _grantFromManager.donors(
           _secondDonorWallet.address
         );
         lastFundingAmountBySecondDonor = fundedBySecondDonor;
+        lastBalanceOfSecondDonor = await _token.balanceOf(
+          _secondDonorWallet.address
+        );
 
+        // Grant balance
         lastBalanceOfGrant = await _token.balanceOf(_grantFromDonor.address);
       });
 
@@ -497,6 +505,8 @@ describe("Grant", () => {
         let fundingAmount = 5e2;
 
         // first donor
+        const initialBalanceOfDonor = lastBalanceOfDonor;
+
         await _grantFromDonor.fund(fundingAmount);
         let { funded: fundedByDonor } = await _grantFromManager.donors(
           _donorWallet.address
@@ -506,9 +516,19 @@ describe("Grant", () => {
         );
         lastFundingAmountByDonor = fundedByDonor;
 
-        fundingAmount = 250;
+        const finalBalanceOfDonor = await _token.balanceOf(
+          _donorWallet.address
+        );
+
+        expect(initialBalanceOfDonor.sub(fundingAmount)).to.be.eq(
+          finalBalanceOfDonor
+        );
+        lastBalanceOfDonor = finalBalanceOfDonor;
 
         // second donor
+        fundingAmount = 250;
+        const initialBalanceOfSecondDonor = lastBalanceOfSecondDonor;
+
         await _grantFromSecondDonor.fund(fundingAmount);
 
         let { funded: fundedBySecondDonor } = await _grantFromManager.donors(
@@ -518,7 +538,15 @@ describe("Grant", () => {
           fundedBySecondDonor
         );
         lastFundingAmountBySecondDonor = fundedBySecondDonor;
+        const finalBalanceOfSecondDonor = await _token.balanceOf(
+          _secondDonorWallet.address
+        );
+        expect(initialBalanceOfSecondDonor.sub(fundingAmount)).to.be.eq(
+          finalBalanceOfSecondDonor
+        );
+        lastBalanceOfSecondDonor = finalBalanceOfSecondDonor;
 
+        // Grant's balance
         const finalBalanceOfGrant = await _token.balanceOf(
           _grantFromDonor.address
         );
@@ -534,6 +562,7 @@ describe("Grant", () => {
         let fundingAmount = 250;
 
         // first donor
+        const initialBalanceOfDonor = lastBalanceOfDonor;
         await _grantFromDonor.fund(fundingAmount);
         let { funded: fundedByDonor } = await _grantFromManager.donors(
           _donorWallet.address
@@ -543,9 +572,19 @@ describe("Grant", () => {
         );
         lastFundingAmountByDonor = fundedByDonor;
 
-        fundingAmount = 500;
+        const finalBalanceOfDonor = await _token.balanceOf(
+          _donorWallet.address
+        );
+
+        expect(initialBalanceOfDonor.sub(fundingAmount)).to.be.eq(
+          finalBalanceOfDonor
+        );
+        lastBalanceOfDonor = finalBalanceOfDonor;
 
         // second donor
+        fundingAmount = 500;
+        const initialBalanceOfSecondDonor = lastBalanceOfSecondDonor;
+
         await _grantFromSecondDonor.fund(fundingAmount);
 
         let { funded: fundedBySecondDonor } = await _grantFromManager.donors(
@@ -555,7 +594,15 @@ describe("Grant", () => {
           fundedBySecondDonor
         );
         lastFundingAmountBySecondDonor = fundedBySecondDonor;
+        const finalBalanceOfSecondDonor = await _token.balanceOf(
+          _secondDonorWallet.address
+        );
+        expect(initialBalanceOfSecondDonor.sub(fundingAmount)).to.be.eq(
+          finalBalanceOfSecondDonor
+        );
+        lastBalanceOfSecondDonor = finalBalanceOfSecondDonor;
 
+        // Grant' balance
         const finalBalanceOfGrant = await _token.balanceOf(
           _grantFromDonor.address
         );
