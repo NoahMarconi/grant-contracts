@@ -334,7 +334,7 @@ describe("Grant", () => {
     });
   });
 
-  describe.only("When multiple grantee are involved", () => {
+  describe("When multiple grantee are involved", () => {
     const AMOUNTS = [1000, 500];
     const TARGET_FUNDING = AMOUNTS.reduce((a, b) => a + b, 0);
 
@@ -405,8 +405,6 @@ describe("Grant", () => {
 
     describe("Grantees' balance", () => {
       let _grantFromDonor: Contract;
-      // const _fundAmount = 5e2;
-      // const _payoutAmount = _fundAmount;
       let _grantFromManager: Contract;
       let _granteeWallet: Wallet;
       let _secondGranteeWallet: Wallet;
