@@ -1,6 +1,5 @@
 import Grant from "../build/Grant.json";
 import GrantToken from "../build/GrantToken.json";
-import GrantFactory from "../build/GrantFactory.json";
 import chai from "chai";
 import * as waffle from "ethereum-waffle";
 import { Contract, Wallet, constants } from "ethers";
@@ -252,6 +251,131 @@ describe("Grant", () => {
         console.log(`funded ${funded}, refunded ${refunded}`);
 
         expect(balanceBeforeRefundForGrant.sub(_REFUND_AMOUNT)).to.eq(balanceAfterRefundForGrant);
+      });
+    });
+
+    describe("Refunding - Approve & Withdraw", () => {
+      describe("With Token - total funding by both donors at once", () => {
+        let _token: Contract, _grantFromDonor: Contract, _grantFromSecondDonor: Contract, _grantFromManager: Contract;
+        let _donorWallet: Wallet, _secondDonorWallet: Wallet;
+        let lastRefundOfDonor: BigNumber, lastRefundOfSecondDonor: BigNumber;
+        let tokenBalanceOfDonor: BigNumber, tokenBalanceOfSecondDonor: BigNumber;
+
+        before(async () => {
+          const {
+            token,
+            tokenFromSecondDonor,
+            grantFromDonor,
+            grantFromSecondDonor,
+            grantFromManager,
+            donorWallet,
+            secondDonorWallet
+          } = await waffle.loadFixture(fixtureForMoreDonors);
+
+          _grantFromDonor = grantFromDonor;
+          _grantFromSecondDonor = grantFromSecondDonor;
+          _donorWallet = donorWallet;
+          _secondDonorWallet = secondDonorWallet;
+          _grantFromManager = grantFromManager;
+          _token = token;
+
+          await token.approve(grantFromDonor.address, 1e6);
+          await tokenFromSecondDonor.approve(grantFromSecondDonor.address, 1e6);
+
+          await _grantFromDonor.fund(1e3);
+          await _grantFromSecondDonor.fund(1e3);
+
+          let { refunded: _lastRefundOfDonor } = await _grantFromManager.donors(_donorWallet.address);
+          let { refunded: _lastRefundOfSecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
+          lastRefundOfDonor = _lastRefundOfDonor;
+          lastRefundOfSecondDonor = _lastRefundOfSecondDonor;
+
+          tokenBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
+          tokenBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
+        });
+        it("should be refunded with initial amount", async () => {
+          await _grantFromManager.approveRefund(1e3, AddressZero);
+
+          await _grantFromManager.withdrawRefund(_donorWallet.address);
+          await _grantFromManager.withdrawRefund(_secondDonorWallet.address);
+
+          // current refund balance check.
+          let { refunded: _lastRefundOfDonor } = await _grantFromManager.donors(_donorWallet.address);
+          let { refunded: _lastRefundOfSecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
+
+          expect(lastRefundOfDonor.add(500)).to.be.eq(_lastRefundOfDonor);
+          expect(lastRefundOfSecondDonor.add(500)).to.be.eq(_lastRefundOfSecondDonor);
+
+          // current token balance check
+          let _tokenBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
+          let _tokenBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
+
+          expect(tokenBalanceOfDonor.add(500)).to.be.eq(_tokenBalanceOfDonor);
+          expect(tokenBalanceOfSecondDonor.add(500)).to.be.eq(_tokenBalanceOfSecondDonor);
+
+          // initializing token and refund balances for next test case.
+          tokenBalanceOfDonor = _tokenBalanceOfDonor;
+          tokenBalanceOfSecondDonor = _tokenBalanceOfSecondDonor;
+
+          lastRefundOfDonor = _lastRefundOfDonor;
+          lastRefundOfSecondDonor = _lastRefundOfSecondDonor;
+        });
+
+        it("should be refunded with partial amount", async () => {
+          await _grantFromManager.approveRefund(500, AddressZero);
+
+          await _grantFromManager.withdrawRefund(_donorWallet.address);
+          await _grantFromManager.withdrawRefund(_secondDonorWallet.address);
+
+          // current refund balance check.
+          let { refunded: _lastRefundOfDonor } = await _grantFromManager.donors(_donorWallet.address);
+          let { refunded: _lastRefundOfSecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
+
+          expect(lastRefundOfDonor.add(250)).to.be.eq(_lastRefundOfDonor);
+          expect(lastRefundOfSecondDonor.add(250)).to.be.eq(_lastRefundOfSecondDonor);
+
+          // current token balance check
+          let _tokenBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
+          let _tokenBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
+
+          expect(tokenBalanceOfDonor.add(250)).to.be.eq(_tokenBalanceOfDonor);
+          expect(tokenBalanceOfSecondDonor.add(250)).to.be.eq(_tokenBalanceOfSecondDonor);
+
+          // initializing token and refund balances for next test case.
+          tokenBalanceOfDonor = _tokenBalanceOfDonor;
+          tokenBalanceOfSecondDonor = _tokenBalanceOfSecondDonor;
+
+          lastRefundOfDonor = _lastRefundOfDonor;
+          lastRefundOfSecondDonor = _lastRefundOfSecondDonor;
+        });
+
+        it("should be refunded with final amount", async () => {
+          await _grantFromManager.approveRefund(500, AddressZero);
+
+          await _grantFromManager.withdrawRefund(_donorWallet.address);
+          await _grantFromManager.withdrawRefund(_secondDonorWallet.address);
+
+          // current refund balance check.
+          let { refunded: _lastRefundOfDonor } = await _grantFromManager.donors(_donorWallet.address);
+          let { refunded: _lastRefundOfSecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
+
+          expect(lastRefundOfDonor.add(250)).to.be.eq(_lastRefundOfDonor);
+          expect(lastRefundOfSecondDonor.add(250)).to.be.eq(_lastRefundOfSecondDonor);
+
+          // current token balance check
+          let _tokenBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
+          let _tokenBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
+
+          expect(tokenBalanceOfDonor.add(250)).to.be.eq(_tokenBalanceOfDonor);
+          expect(tokenBalanceOfSecondDonor.add(250)).to.be.eq(_tokenBalanceOfSecondDonor);
+
+          // initializing token and refund balances for next test case.
+          tokenBalanceOfDonor = _tokenBalanceOfDonor;
+          tokenBalanceOfSecondDonor = _tokenBalanceOfSecondDonor;
+
+          lastRefundOfDonor = _lastRefundOfDonor;
+          lastRefundOfSecondDonor = _lastRefundOfSecondDonor;
+        });
       });
     });
   });
