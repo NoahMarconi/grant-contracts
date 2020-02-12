@@ -79,7 +79,7 @@ describe("Grant", () => {
     };
   }
 
-  describe("Token", () => {
+  describe("With Token", () => {
     describe("Refunding", () => {
       let _grantFromDonor: Contract;
       const _fundAmount = 500;
@@ -256,7 +256,7 @@ describe("Grant", () => {
       });
     });
 
-    describe("Donor balance", () => {
+    describe("Donor's balance", () => {
       let _grantFromDonor: Contract;
       const FUNDING_AMOUNT = 1e3;
       const REFUND_AMOUNT = FUNDING_AMOUNT / 2;
@@ -273,47 +273,47 @@ describe("Grant", () => {
         _donorWallet = donorWallet;
         _token = token;
 
+        // Token Funding by Donor
         await token.approve(grantFromDonor.address, 1e3);
-
         await _grantFromDonor.fund(FUNDING_AMOUNT);
 
         initialBalanceAfterFunding = await _token.balanceOf(_donorWallet.address);
       });
 
       it("should not be updated yet", async () => {
-        // verifying donor's token balance
+        // Checking donor's token balance
         const tokenBalance = await _token.balanceOf(_donorWallet.address);
         expect(initialBalanceAfterFunding).to.eq(tokenBalance);
 
-        // verifying donor's refunded field
+        // Checking donor's refunded field
         const { refunded } = await _grantFromManager.donors(_donorWallet.address);
         expect(refunded).to.eq(0);
       });
 
-      it("should updated with token after approve withdraw", async () => {
+      it("should updated with token after approve refund and withdraw refund", async () => {
         await _grantFromManager.approveRefund(REFUND_AMOUNT, AddressZero);
         await _grantFromDonor.withdrawRefund(_donorWallet.address);
 
-        // verifying donor's token balance
+        // Checking donor's token balance
         const finalBalanceAfterRefunding = await _token.balanceOf(_donorWallet.address);
         expect(initialBalanceAfterFunding.add(REFUND_AMOUNT)).to.eq(finalBalanceAfterRefunding);
 
-        // verifying donor's refunded field
+        // Checking donor's refunded field
         const { refunded } = await _grantFromManager.donors(_donorWallet.address);
         expect(refunded).to.eq(REFUND_AMOUNT);
       });
     });
   });
 
-  describe("Ether", () => {
-    describe("Donor balance", () => {
+  describe("With Ether", () => {
+    describe("Donor's balance", () => {
       let _grantFromDonorWithEther: Contract;
       const FUNDING_AMOUNT = 1e3;
       const REFUND_AMOUNT = FUNDING_AMOUNT / 2;
       let _grantFromManagerWithEther: Contract;
       let _donorWallet: Wallet;
       let _provider: any;
-      let _initialEtherBalance: any;
+      let _initialEtherBalance: BigNumber;
 
       before(async () => {
         const { grantFromDonorWithEther, grantFromManagerWithEther, donorWallet, provider } = await waffle.loadFixture(
@@ -325,31 +325,40 @@ describe("Grant", () => {
         _donorWallet = donorWallet;
         _provider = provider;
 
+        // Ether funding by Donor
         await donorWallet.sendTransaction({
           to: _grantFromDonorWithEther.address,
-          value: 1e6
+          value: 1e6,
+          gasPrice: 1
         });
 
         _initialEtherBalance = await _provider.getBalance(_donorWallet.address);
       });
 
       it("should not be updated yet", async () => {
+        // Checking donor's ether balance
         const etherBalance = await _provider.getBalance(_donorWallet.address);
-        expect(_initialEtherBalance).to.eq(etherBalance);
+        expect(_initialEtherBalance).to.be.eq(etherBalance);
 
+        // Checking donor's refunded field
         const { refunded } = await _grantFromManagerWithEther.donors(_donorWallet.address);
-        expect(refunded).to.eq(0);
+        expect(refunded).to.be.eq(0);
       });
 
-      it("should updated with ether after approve withdraw", async () => {
+      it("should updated with ether after approve refund and withdraw refund", async () => {
+        // Approve and withdraw Fund for Donor.
         await _grantFromManagerWithEther.approveRefund(REFUND_AMOUNT, AddressZero);
-        await _grantFromManagerWithEther.withdrawRefund(_donorWallet.address);
+        const receipt = await (
+          await _grantFromDonorWithEther.withdrawRefund(_donorWallet.address, { gasPrice: 1 })
+        ).wait();
 
+        // Checking donor's refunded field
         const { refunded } = await _grantFromManagerWithEther.donors(_donorWallet.address);
-        expect(refunded).to.eq(REFUND_AMOUNT);
+        expect(refunded).to.be.eq(REFUND_AMOUNT);
 
+        // Checking donor's ether balance
         const etherBalanceAfterRefunding = await _provider.getBalance(_donorWallet.address);
-        expect(_initialEtherBalance.add(REFUND_AMOUNT)).to.eq(etherBalanceAfterRefunding);
+        expect(_initialEtherBalance.sub(receipt.gasUsed).add(REFUND_AMOUNT)).to.be.eq(etherBalanceAfterRefunding);
       });
     });
   });
