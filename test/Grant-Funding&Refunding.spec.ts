@@ -3,9 +3,10 @@ import GrantToken from "../build/GrantToken.json";
 import GrantFactory from "../build/GrantFactory.json";
 import chai from "chai";
 import * as waffle from "ethereum-waffle";
-import { Contract, Wallet } from "ethers";
+import { Contract, Wallet, constants } from "ethers";
 import { BigNumber } from "ethers/utils/bignumber";
 import { AddressZero } from "ethers/constants";
+import { before } from "mocha";
 
 chai.use(waffle.solidity);
 const { expect } = chai;
@@ -316,6 +317,7 @@ describe("Grant", () => {
       await token.mint(donorWallet.address, 1e6);
       await token.mint(secondDonorWallet.address, 1e6);
 
+      // For token.
       const tokenFromSecondDonor: Contract = new Contract(token.address, GrantToken.abi, secondDonorWallet);
 
       const grantFromDonor: Contract = new Contract(grantWithToken.address, Grant.abi, donorWallet);
@@ -323,6 +325,30 @@ describe("Grant", () => {
       const grantFromSecondDonor: Contract = new Contract(grantWithToken.address, Grant.abi, secondDonorWallet);
 
       const grantFromManager: Contract = new Contract(grantWithToken.address, Grant.abi, managerWallet);
+
+      // For ether
+      const grantWithEther: Contract = await waffle.deployContract(
+        granteeWallet,
+        Grant,
+        [
+          [granteeWallet.address, secondGranteeWallet.address],
+          AMOUNTS,
+          managerWallet.address,
+          AddressZero,
+          TARGET_FUNDING,
+          currentTime + 86400,
+          currentTime + 86400 * 2
+        ],
+        { gasLimit: 6e6 }
+      );
+
+      const grantFromDonorWithEther: Contract = new Contract(grantWithEther.address, Grant.abi, donorWallet);
+      const grantFromSecondDonorWithEther: Contract = new Contract(
+        grantWithEther.address,
+        Grant.abi,
+        secondDonorWallet
+      );
+      const grantFromManagerWithEther: Contract = new Contract(grantWithEther.address, Grant.abi, managerWallet);
 
       return {
         grantWithToken,
@@ -337,139 +363,264 @@ describe("Grant", () => {
         secondDonorWallet,
         managerWallet,
         thirdPersonWallet,
+        grantFromDonorWithEther,
+        grantFromSecondDonorWithEther,
+        grantFromManagerWithEther,
         provider
       };
     }
 
-    describe("Donors' balance", () => {
-      let _grantFromDonor: Contract;
-      let _grantFromSecondDonor: Contract;
-      let _grantFromManager: Contract;
-      //let _granteeWallet: Wallet;
-      let _donorWallet: Wallet;
-      let _secondDonorWallet: Wallet;
+    describe("With Token", () => {
+      describe("Donors' balance", () => {
+        let _grantFromDonor: Contract;
+        let _grantFromSecondDonor: Contract;
+        let _grantFromManager: Contract;
+        let _donorWallet: Wallet;
+        let _secondDonorWallet: Wallet;
 
-      let _token: Contract;
-      //let _secondGranteeWallet: Wallet;
-      let lastFundingAmountByDonor: BigNumber;
-      let lastFundingAmountBySecondDonor: BigNumber;
+        let _token: Contract;
+        let lastFundingAmountByDonor: BigNumber;
+        let lastFundingAmountBySecondDonor: BigNumber;
 
-      let lastBalanceOfGrant: BigNumber;
-      let lastBalanceOfDonor: BigNumber;
-      let lastBalanceOfSecondDonor: BigNumber;
+        let lastBalanceOfGrant: BigNumber;
+        let lastBalanceOfDonor: BigNumber;
+        let lastBalanceOfSecondDonor: BigNumber;
 
-      before(async () => {
-        const {
-          token,
-          tokenFromSecondDonor,
-          grantFromDonor,
-          grantFromSecondDonor,
-          grantFromManager,
-          donorWallet,
-          secondDonorWallet
-        } = await waffle.loadFixture(fixtureWithMultipleGrantee);
+        before(async () => {
+          const {
+            token,
+            tokenFromSecondDonor,
+            grantFromDonor,
+            grantFromSecondDonor,
+            grantFromManager,
+            donorWallet,
+            secondDonorWallet
+          } = await waffle.loadFixture(fixtureWithMultipleGrantee);
 
-        _token = token;
-        _grantFromDonor = grantFromDonor;
-        _grantFromSecondDonor = grantFromSecondDonor;
-        _grantFromManager = grantFromManager;
+          _token = token;
+          _grantFromDonor = grantFromDonor;
+          _grantFromSecondDonor = grantFromSecondDonor;
+          _grantFromManager = grantFromManager;
 
-        _donorWallet = donorWallet;
-        _secondDonorWallet = secondDonorWallet;
+          _donorWallet = donorWallet;
+          _secondDonorWallet = secondDonorWallet;
 
-        await token.approve(grantFromDonor.address, TARGET_FUNDING);
-        await tokenFromSecondDonor.approve(grantFromSecondDonor.address, TARGET_FUNDING);
+          await token.approve(grantFromDonor.address, TARGET_FUNDING);
+          await tokenFromSecondDonor.approve(grantFromSecondDonor.address, TARGET_FUNDING);
 
-        // first donor
-        let { funded: fundedByDonor } = await _grantFromManager.donors(_donorWallet.address);
-        lastFundingAmountByDonor = fundedByDonor;
-        lastBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
+          // first donor
+          let { funded: fundedByDonor } = await _grantFromManager.donors(_donorWallet.address);
+          lastFundingAmountByDonor = fundedByDonor;
+          lastBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
 
-        // second donor
-        let { funded: fundedBySecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
-        lastFundingAmountBySecondDonor = fundedBySecondDonor;
-        lastBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
+          // second donor
+          let { funded: fundedBySecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
+          lastFundingAmountBySecondDonor = fundedBySecondDonor;
+          lastBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
 
-        // Grant balance
-        lastBalanceOfGrant = await _token.balanceOf(_grantFromDonor.address);
+          // Grant balance
+          lastBalanceOfGrant = await _token.balanceOf(_grantFromDonor.address);
+        });
+
+        it("should revert with 0 funding", async () => {
+          await expect(_grantFromDonor.fund(0)).to.be.reverted;
+        });
+
+        it("should be updated with initial funding", async () => {
+          const initialBalanceForGrant = lastBalanceOfGrant;
+
+          let fundingAmount = 5e2;
+
+          // first donor
+          const initialBalanceOfDonor = lastBalanceOfDonor;
+
+          await _grantFromDonor.fund(fundingAmount);
+          let { funded: fundedByDonor } = await _grantFromManager.donors(_donorWallet.address);
+          expect(lastFundingAmountByDonor.add(fundingAmount)).to.be.eq(fundedByDonor);
+          lastFundingAmountByDonor = fundedByDonor;
+
+          const finalBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
+
+          expect(initialBalanceOfDonor.sub(fundingAmount)).to.be.eq(finalBalanceOfDonor);
+          lastBalanceOfDonor = finalBalanceOfDonor;
+
+          // second donor
+          fundingAmount = 250;
+          const initialBalanceOfSecondDonor = lastBalanceOfSecondDonor;
+
+          await _grantFromSecondDonor.fund(fundingAmount);
+
+          let { funded: fundedBySecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
+          expect(lastFundingAmountBySecondDonor.add(fundingAmount)).to.be.eq(fundedBySecondDonor);
+          lastFundingAmountBySecondDonor = fundedBySecondDonor;
+          const finalBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
+          expect(initialBalanceOfSecondDonor.sub(fundingAmount)).to.be.eq(finalBalanceOfSecondDonor);
+          lastBalanceOfSecondDonor = finalBalanceOfSecondDonor;
+
+          // Grant's balance
+          const finalBalanceOfGrant = await _token.balanceOf(_grantFromDonor.address);
+          lastBalanceOfGrant = finalBalanceOfGrant;
+
+          expect(initialBalanceForGrant.add(5e2).add(250)).to.be.eq(finalBalanceOfGrant);
+        });
+
+        it("should be updated with final funding", async () => {
+          const initialBalanceForGrant = lastBalanceOfGrant;
+          let fundingAmount = 250;
+
+          // first donor
+          const initialBalanceOfDonor = lastBalanceOfDonor;
+          await _grantFromDonor.fund(fundingAmount);
+          let { funded: fundedByDonor } = await _grantFromManager.donors(_donorWallet.address);
+          expect(lastFundingAmountByDonor.add(fundingAmount)).to.be.eq(fundedByDonor);
+          lastFundingAmountByDonor = fundedByDonor;
+
+          const finalBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
+
+          expect(initialBalanceOfDonor.sub(fundingAmount)).to.be.eq(finalBalanceOfDonor);
+          lastBalanceOfDonor = finalBalanceOfDonor;
+
+          // second donor
+          fundingAmount = 500;
+          const initialBalanceOfSecondDonor = lastBalanceOfSecondDonor;
+
+          await _grantFromSecondDonor.fund(fundingAmount);
+
+          let { funded: fundedBySecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
+          expect(lastFundingAmountBySecondDonor.add(fundingAmount)).to.be.eq(fundedBySecondDonor);
+          lastFundingAmountBySecondDonor = fundedBySecondDonor;
+          const finalBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
+          expect(initialBalanceOfSecondDonor.sub(fundingAmount)).to.be.eq(finalBalanceOfSecondDonor);
+          lastBalanceOfSecondDonor = finalBalanceOfSecondDonor;
+
+          // Grant' balance
+          const finalBalanceOfGrant = await _token.balanceOf(_grantFromDonor.address);
+          lastBalanceOfGrant = finalBalanceOfGrant;
+
+          expect(initialBalanceForGrant.add(250).add(500)).to.be.eq(finalBalanceOfGrant);
+        });
       });
+    });
 
-      it("should revert with 0 funding", async () => {
-        await expect(_grantFromDonor.fund(0)).to.be.reverted;
-      });
+    describe("With Ether", () => {
+      describe("Donors' balance", () => {
+        let _grantFromDonorWithEther: Contract;
+        let _grantFromSecondDonorWithEther: Contract;
+        let _grantFromManagerWithEther: Contract;
+        let _donorWallet: Wallet;
+        let _secondDonorWallet: Wallet;
+        let _provider: any;
 
-      it("should be updated with initial funding", async () => {
-        const initialBalanceForGrant = lastBalanceOfGrant;
+        let lastFundingOfDonor: BigNumber,
+          lastFundingOfSecondDonor: BigNumber,
+          etherBalanceOfDonor: BigNumber,
+          etherBalanceOfSecondDonor: BigNumber;
 
-        let fundingAmount = 5e2;
+        before(async () => {
+          const {
+            grantFromDonorWithEther,
+            grantFromSecondDonorWithEther,
+            grantFromManagerWithEther,
+            donorWallet,
+            secondDonorWallet,
+            provider
+          } = await waffle.loadFixture(fixtureWithMultipleGrantee);
 
-        // first donor
-        const initialBalanceOfDonor = lastBalanceOfDonor;
+          _grantFromDonorWithEther = grantFromDonorWithEther;
+          _grantFromSecondDonorWithEther = grantFromSecondDonorWithEther;
+          _grantFromManagerWithEther = grantFromManagerWithEther;
+          _donorWallet = donorWallet;
+          _secondDonorWallet = secondDonorWallet;
+          _provider = provider;
 
-        await _grantFromDonor.fund(fundingAmount);
-        let { funded: fundedByDonor } = await _grantFromManager.donors(_donorWallet.address);
-        expect(lastFundingAmountByDonor.add(fundingAmount)).to.be.eq(fundedByDonor);
-        lastFundingAmountByDonor = fundedByDonor;
+          let { funded: _lastFundingOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
+          let { funded: _lastFundingOfSecondDonor } = await _grantFromManagerWithEther.donors(
+            _secondDonorWallet.address
+          );
+          lastFundingOfDonor = _lastFundingOfDonor;
+          lastFundingOfSecondDonor = _lastFundingOfSecondDonor;
 
-        const finalBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
+          etherBalanceOfDonor = await _provider.getBalance(_donorWallet.address);
+          etherBalanceOfSecondDonor = await _provider.getBalance(_secondDonorWallet.address);
+        });
 
-        expect(initialBalanceOfDonor.sub(fundingAmount)).to.be.eq(finalBalanceOfDonor);
-        lastBalanceOfDonor = finalBalanceOfDonor;
+        it("should be updated with initial funding", async () => {
+          const receiptForDonor = await (
+            await _donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: 500, gasPrice: 1 })
+          ).wait();
 
-        // second donor
-        fundingAmount = 250;
-        const initialBalanceOfSecondDonor = lastBalanceOfSecondDonor;
+          const receiptForSecondDonor = await (
+            await _secondDonorWallet.sendTransaction({
+              to: _grantFromSecondDonorWithEther.address,
+              value: 600,
+              gasPrice: 1
+            })
+          ).wait();
 
-        await _grantFromSecondDonor.fund(fundingAmount);
+          // Checking current ether balance
+          const _etherBalanceOfDonor = await _provider.getBalance(_donorWallet.address);
+          const _etherBalanceOfSecondDonor = await _provider.getBalance(_secondDonorWallet.address);
 
-        let { funded: fundedBySecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
-        expect(lastFundingAmountBySecondDonor.add(fundingAmount)).to.be.eq(fundedBySecondDonor);
-        lastFundingAmountBySecondDonor = fundedBySecondDonor;
-        const finalBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
-        expect(initialBalanceOfSecondDonor.sub(fundingAmount)).to.be.eq(finalBalanceOfSecondDonor);
-        lastBalanceOfSecondDonor = finalBalanceOfSecondDonor;
+          expect(etherBalanceOfDonor.sub(500).sub(receiptForDonor.gasUsed!)).to.be.eq(_etherBalanceOfDonor);
+          expect(etherBalanceOfSecondDonor.sub(600).sub(receiptForSecondDonor.gasUsed!)).to.be.eq(
+            _etherBalanceOfSecondDonor
+          );
 
-        // Grant's balance
-        const finalBalanceOfGrant = await _token.balanceOf(_grantFromDonor.address);
-        lastBalanceOfGrant = finalBalanceOfGrant;
+          // Checking current fund balance
+          let { funded: _lastFundingOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
+          let { funded: _lastFundingOfSecondDonor } = await _grantFromManagerWithEther.donors(
+            _secondDonorWallet.address
+          );
 
-        expect(initialBalanceForGrant.add(5e2).add(250)).to.be.eq(finalBalanceOfGrant);
-      });
+          expect(lastFundingOfDonor.add(500)).to.be.eq(_lastFundingOfDonor);
+          expect(lastFundingOfSecondDonor.add(600)).to.be.eq(_lastFundingOfSecondDonor);
 
-      it("should be updated with final funding", async () => {
-        const initialBalanceForGrant = lastBalanceOfGrant;
-        let fundingAmount = 250;
+          // Initializing ether and fund balances for next test case.
+          etherBalanceOfDonor = _etherBalanceOfDonor;
+          etherBalanceOfSecondDonor = _etherBalanceOfSecondDonor;
 
-        // first donor
-        const initialBalanceOfDonor = lastBalanceOfDonor;
-        await _grantFromDonor.fund(fundingAmount);
-        let { funded: fundedByDonor } = await _grantFromManager.donors(_donorWallet.address);
-        expect(lastFundingAmountByDonor.add(fundingAmount)).to.be.eq(fundedByDonor);
-        lastFundingAmountByDonor = fundedByDonor;
+          lastFundingOfDonor = _lastFundingOfDonor;
+          lastFundingOfSecondDonor = _lastFundingOfSecondDonor;
+        });
 
-        const finalBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
+        it("should be updated with final funding", async () => {
+          const receiptForDonor = await (
+            await _donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: 300, gasPrice: 1 })
+          ).wait();
 
-        expect(initialBalanceOfDonor.sub(fundingAmount)).to.be.eq(finalBalanceOfDonor);
-        lastBalanceOfDonor = finalBalanceOfDonor;
+          const receiptForSecondDonor = await (
+            await _secondDonorWallet.sendTransaction({
+              to: _grantFromSecondDonorWithEther.address,
+              value: 100,
+              gasPrice: 1
+            })
+          ).wait();
 
-        // second donor
-        fundingAmount = 500;
-        const initialBalanceOfSecondDonor = lastBalanceOfSecondDonor;
+          // Checking current ether balance
+          const _etherBalanceOfDonor = await _provider.getBalance(_donorWallet.address);
+          const _etherBalanceOfSecondDonor = await _provider.getBalance(_secondDonorWallet.address);
 
-        await _grantFromSecondDonor.fund(fundingAmount);
+          expect(etherBalanceOfDonor.sub(300).sub(receiptForDonor.gasUsed!)).to.be.eq(_etherBalanceOfDonor);
+          expect(etherBalanceOfSecondDonor.sub(100).sub(receiptForSecondDonor.gasUsed!)).to.be.eq(
+            _etherBalanceOfSecondDonor
+          );
 
-        let { funded: fundedBySecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
-        expect(lastFundingAmountBySecondDonor.add(fundingAmount)).to.be.eq(fundedBySecondDonor);
-        lastFundingAmountBySecondDonor = fundedBySecondDonor;
-        const finalBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
-        expect(initialBalanceOfSecondDonor.sub(fundingAmount)).to.be.eq(finalBalanceOfSecondDonor);
-        lastBalanceOfSecondDonor = finalBalanceOfSecondDonor;
+          // Checking current fund balance
+          let { funded: _lastFundingOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
+          let { funded: _lastFundingOfSecondDonor } = await _grantFromManagerWithEther.donors(
+            _secondDonorWallet.address
+          );
 
-        // Grant' balance
-        const finalBalanceOfGrant = await _token.balanceOf(_grantFromDonor.address);
-        lastBalanceOfGrant = finalBalanceOfGrant;
+          expect(lastFundingOfDonor.add(300)).to.be.eq(_lastFundingOfDonor);
+          expect(lastFundingOfSecondDonor.add(100)).to.be.eq(_lastFundingOfSecondDonor);
 
-        expect(initialBalanceForGrant.add(250).add(500)).to.be.eq(finalBalanceOfGrant);
+          // Initializing ether and fund balances for next test case.
+          etherBalanceOfDonor = _etherBalanceOfDonor;
+          etherBalanceOfSecondDonor = _etherBalanceOfSecondDonor;
+
+          lastFundingOfDonor = _lastFundingOfDonor;
+          lastFundingOfSecondDonor = _lastFundingOfSecondDonor;
+        });
       });
     });
   });
