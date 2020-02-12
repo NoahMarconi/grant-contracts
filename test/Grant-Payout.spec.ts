@@ -229,10 +229,12 @@ describe("Grant", () => {
         // Donor fund Ether
         await _donorWallet.sendTransaction({
           to: _grantFromDonorWithEther.address,
-          value: 1e6
+          value: 1e6,
+          gasPrice: 1
         });
 
         _initialEtherBalance = await _provider.getBalance(_granteeWallet.address);
+        //   console.log(`_initialEtherBalance ${_initialEtherBalance}`);
       });
 
       it("should not be updated yet", async () => {
@@ -249,8 +251,9 @@ describe("Grant", () => {
         const { totalPayed } = await _grantFromManagerWithEther.grantees(_granteeWallet.address);
         expect(_payoutAmount).eq(totalPayed);
 
-        const balanceAfterPayout = await _provider.getBalance(_granteeWallet.address);
-        expect(_initialEtherBalance.add(_payoutAmount)).eq(balanceAfterPayout);
+        const etherBalanceAfterPayout = await _provider.getBalance(_granteeWallet.address);
+        // console.log(`_initialEtherBalance ${etherBalanceAfterPayout}`);
+        expect(_initialEtherBalance.add(_payoutAmount)).eq(etherBalanceAfterPayout);
       });
     });
   });
