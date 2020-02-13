@@ -7,12 +7,15 @@ import { Contract, Wallet, constants } from "ethers";
 import { BigNumber } from "ethers/utils/bignumber";
 import { Web3Provider, Provider } from "ethers/providers";
 import { bigNumberify, randomBytes, solidityKeccak256, id } from "ethers/utils";
-import { AddressZero } from "ethers/constants";
+import { AddressZero, Zero } from "ethers/constants";
 
 chai.use(waffle.solidity);
 const { expect, assert } = chai;
 
 describe("Grant", () => {
+  const AMOUNTS = [1000];
+  const TARGET_FUNDING = AMOUNTS.reduce((a, b) => a + b, 0);
+
   async function fixture(provider: any, wallets: Wallet[]) {
     const currentTime = (await provider.getBlock(await provider.getBlockNumber())).timestamp;
     const [granteeWallet, donorWallet, managerWallet] = wallets;
@@ -23,10 +26,10 @@ describe("Grant", () => {
       Grant,
       [
         [granteeWallet.address],
-        [1000],
+        AMOUNTS,
         managerWallet.address,
         token.address,
-        1000,
+        TARGET_FUNDING,
         currentTime + 86400,
         currentTime + 86400 * 2
       ],
@@ -38,10 +41,10 @@ describe("Grant", () => {
       Grant,
       [
         [granteeWallet.address],
-        [1000],
+        AMOUNTS,
         managerWallet.address,
         AddressZero,
-        1000,
+        TARGET_FUNDING,
         currentTime + 86400,
         currentTime + 86400 * 2
       ],
@@ -257,35 +260,40 @@ describe("Grant", () => {
 
     it("should persist the correct overall funding target", async () => {
       const targetFunding = await _grant.targetFunding();
-      expect(targetFunding).to.eq(1000);
+      expect(targetFunding).to.be.eq(TARGET_FUNDING);
     });
 
-    it("should persist the correct grantee funding target", async () => {
-      const grantee = await _grant.grantees(_granteeAddress);
-      expect(grantee.targetFunding).to.eq(1000);
+    it("should persist the correct funding target of a grantee", async () => {
+      const { targetFunding } = await _grant.grantees(_granteeAddress);
+      expect(targetFunding).to.be.eq(TARGET_FUNDING);
+    });
+
+    it("should persist the initial total funding as zero", async () => {
+      const totalFunding = await _grant.totalFunding();
+      expect(totalFunding).to.be.eq(Zero);
     });
 
     it("should persist the correct manager", async () => {
-      const manager = await _grant.manager();
-      expect(manager).to.eq(_managerAddress);
+      const managerAddress = await _grant.manager();
+      expect(managerAddress).to.be.eq(_managerAddress);
     });
 
     it("should persist the correct currency", async () => {
       const currency = await _grant.currency();
-      expect(currency).to.eq(_token.address);
+      expect(currency).to.be.eq(_token.address);
     });
 
     it("should persist the correct fundingExpiration", async () => {
       const fundingExpiration = await _grant.fundingExpiration();
-      expect(fundingExpiration).to.eq(_fundingExpiration);
+      expect(fundingExpiration).to.be.eq(_fundingExpiration);
     });
 
     it("should persist the correct contractExpiration", async () => {
       const contractExpiration = await _grant.contractExpiration();
-      expect(contractExpiration).to.eq(_contractExpiration);
+      expect(contractExpiration).to.be.eq(_contractExpiration);
     });
 
-    it("should persist the correct grant status", async () => {
+    it("should persist the status as not cancelled", async () => {
       const cancelled = await _grant.grantCancelled();
       expect(cancelled).to.be.eq(false);
     });
