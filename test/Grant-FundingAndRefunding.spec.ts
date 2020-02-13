@@ -141,18 +141,18 @@ describe("Grant", () => {
       });
 
       it("should emit Events", async () => {
-        let logFundingEvent: any[] = !_fundReceipt.events
+        const logFundingEvent: any[] = !_fundReceipt.events
           ? []
           : _fundReceipt.events.filter((event: any) => event.event == "LogFunding");
-        for (let event of logFundingEvent) {
+        for (const event of logFundingEvent) {
           const logFundingEvent = event.eventSignature;
           expect(logFundingEvent).to.eq("LogFunding(address,uint256)");
         }
 
-        let LogFundingCompleteEvent: any[] = !_fundReceipt.events
+        const LogFundingCompleteEvent: any[] = !_fundReceipt.events
           ? []
           : _fundReceipt.events.filter((event: any) => event.event == "LogFundingComplete");
-        for (let event of LogFundingCompleteEvent) {
+        for (const event of LogFundingCompleteEvent) {
           const logFundingEvent = event.eventSignature;
           expect(logFundingEvent).to.eq("LogFundingComplete()");
         }
@@ -236,16 +236,16 @@ describe("Grant", () => {
       });
 
       it("should emit Events", async () => {
-        let logFundingEvent: any[] = _fundReceipt.events.filter((event: any) => event.event == "LogFunding");
-        for (let event of logFundingEvent) {
+        const logFundingEvent: any[] = _fundReceipt.events.filter((event: any) => event.event == "LogFunding");
+        for (const event of logFundingEvent) {
           const logFundingEvent = event.eventSignature;
           expect(logFundingEvent).to.eq("LogFunding(address,uint256)");
         }
 
-        let LogFundingCompleteEvent: any[] = _fundReceipt.events.filter(
+        const LogFundingCompleteEvent: any[] = _fundReceipt.events.filter(
           (event: any) => event.event == "LogFundingComplete"
         );
-        for (let event of LogFundingCompleteEvent) {
+        for (const event of LogFundingCompleteEvent) {
           const logFundingEvent = event.eventSignature;
           expect(logFundingEvent).to.eq("LogFundingComplete()");
         }
@@ -409,12 +409,12 @@ describe("Grant", () => {
           await tokenFromSecondDonor.approve(grantFromSecondDonor.address, TARGET_FUNDING);
 
           // first donor
-          let { funded: fundedByDonor } = await _grantFromManager.donors(_donorWallet.address);
+          const { funded: fundedByDonor } = await _grantFromManager.donors(_donorWallet.address);
           lastFundingAmountByDonor = fundedByDonor;
           lastBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
 
           // second donor
-          let { funded: fundedBySecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
+          const { funded: fundedBySecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
           lastFundingAmountBySecondDonor = fundedBySecondDonor;
           lastBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
 
@@ -435,7 +435,7 @@ describe("Grant", () => {
           const initialBalanceOfDonor = lastBalanceOfDonor;
 
           await _grantFromDonor.fund(fundingAmount);
-          let { funded: fundedByDonor } = await _grantFromManager.donors(_donorWallet.address);
+          const { funded: fundedByDonor } = await _grantFromManager.donors(_donorWallet.address);
           expect(lastFundingAmountByDonor.add(fundingAmount)).to.be.eq(fundedByDonor);
           lastFundingAmountByDonor = fundedByDonor;
 
@@ -450,7 +450,7 @@ describe("Grant", () => {
 
           await _grantFromSecondDonor.fund(fundingAmount);
 
-          let { funded: fundedBySecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
+          const { funded: fundedBySecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
           expect(lastFundingAmountBySecondDonor.add(fundingAmount)).to.be.eq(fundedBySecondDonor);
           lastFundingAmountBySecondDonor = fundedBySecondDonor;
           const finalBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
@@ -533,8 +533,8 @@ describe("Grant", () => {
           _secondDonorWallet = secondDonorWallet;
           _provider = provider;
 
-          let { funded: _lastFundingOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
-          let { funded: _lastFundingOfSecondDonor } = await _grantFromManagerWithEther.donors(
+          const { funded: _lastFundingOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
+          const { funded: _lastFundingOfSecondDonor } = await _grantFromManagerWithEther.donors(
             _secondDonorWallet.address
           );
           lastFundingOfDonor = _lastFundingOfDonor;
@@ -567,8 +567,8 @@ describe("Grant", () => {
           );
 
           // Checking current fund balance
-          let { funded: _lastFundingOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
-          let { funded: _lastFundingOfSecondDonor } = await _grantFromManagerWithEther.donors(
+          const { funded: _lastFundingOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
+          const { funded: _lastFundingOfSecondDonor } = await _grantFromManagerWithEther.donors(
             _secondDonorWallet.address
           );
 
@@ -606,8 +606,8 @@ describe("Grant", () => {
           );
 
           // Checking current fund balance
-          let { funded: _lastFundingOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
-          let { funded: _lastFundingOfSecondDonor } = await _grantFromManagerWithEther.donors(
+          const { funded: _lastFundingOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
+          const { funded: _lastFundingOfSecondDonor } = await _grantFromManagerWithEther.donors(
             _secondDonorWallet.address
           );
 
