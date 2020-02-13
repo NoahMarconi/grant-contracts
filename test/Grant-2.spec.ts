@@ -13,21 +13,10 @@ chai.use(waffle.solidity);
 const { expect, assert } = chai;
 
 describe("Grant", () => {
-  const GrantStatus = {
-    INIT: 0,
-    SUCCESS: 1,
-    DONE: 2
-  };
-
   async function fixture(provider: any, wallets: Wallet[]) {
     const currentTime = (await provider.getBlock(await provider.getBlockNumber())).timestamp;
     const [granteeWallet, donorWallet, managerWallet] = wallets;
     const token: Contract = await waffle.deployContract(donorWallet, GrantToken, ["Grant Token", "GT", 18]);
-
-    // console.log('Total wallets ' + wallets.length);
-    // wallets.forEach((wallet, index) => {
-    //   console.log(index + " index, ", wallet);
-    // });
 
     const grantWithToken: Contract = await waffle.deployContract(
       granteeWallet,
@@ -102,205 +91,203 @@ describe("Grant", () => {
 
     let currentTime: any;
 
-    describe("When created", () => {
-      before(async () => {
-        const {
-          grantWithToken,
-          token,
-          granteeWallet,
-          managerWallet,
-          fundingExpiration,
-          contractExpiration,
-          provider,
-          grantFactory,
-          wallets
-        } = await waffle.loadFixture(fixture);
+    before(async () => {
+      const {
+        grantWithToken,
+        token,
+        granteeWallet,
+        managerWallet,
+        fundingExpiration,
+        contractExpiration,
+        provider,
+        grantFactory,
+        wallets
+      } = await waffle.loadFixture(fixture);
 
-        _granteeAddress = granteeWallet.address;
-        _granteeFactory = grantFactory;
-        _managerAddress = managerWallet.address;
-        _fundingExpiration = fundingExpiration;
-        _contractExpiration = contractExpiration;
-        _grant = grantWithToken;
-        _token = token;
-        _provider = provider;
-        _wallets = wallets;
+      _granteeAddress = granteeWallet.address;
+      _granteeFactory = grantFactory;
+      _managerAddress = managerWallet.address;
+      _fundingExpiration = fundingExpiration;
+      _contractExpiration = contractExpiration;
+      _grant = grantWithToken;
+      _token = token;
+      _provider = provider;
+      _wallets = wallets;
 
-        currentTime = (await _provider.getBlock(await _provider.getBlockNumber())).timestamp;
-      });
+      currentTime = (await _provider.getBlock(await _provider.getBlockNumber())).timestamp;
+    });
 
-      it("should fail if fundingExpiration greater than contractExpiration", async () => {
-        await expect(
-          _granteeFactory.create(
-            [_granteeAddress],
-            [1000],
-            _managerAddress,
-            AddressZero,
-            1000,
-            currentTime + 86400 * 2,
-            currentTime + 86400,
-            "0x0",
-            { gasLimit: 6e6 }
-          )
-        ).to.be.revertedWith("constructor::Invalid Argument. _fundingExpiration not < _contractExpiration.");
-      });
+    it("should fail if fundingExpiration greater than contractExpiration", async () => {
+      await expect(
+        _granteeFactory.create(
+          [_granteeAddress],
+          [1000],
+          _managerAddress,
+          AddressZero,
+          1000,
+          currentTime + 86400 * 2,
+          currentTime + 86400,
+          "0x0",
+          { gasLimit: 6e6 }
+        )
+      ).to.be.revertedWith("constructor::Invalid Argument. _fundingExpiration not < _contractExpiration.");
+    });
 
-      it("should fail if fundingExpiration less than now", async () => {
-        await expect(
-          _granteeFactory.create(
-            [_granteeAddress],
-            [1000],
-            _managerAddress,
-            AddressZero,
-            1000,
-            currentTime - 1,
-            currentTime + 86400,
-            "0x0",
-            { gasLimit: 6e6 }
-          )
-        ).revertedWith("constructor::Invalid Argument. _fundingExpiration not > now");
-      });
+    it("should fail if fundingExpiration less than now", async () => {
+      await expect(
+        _granteeFactory.create(
+          [_granteeAddress],
+          [1000],
+          _managerAddress,
+          AddressZero,
+          1000,
+          currentTime - 1,
+          currentTime + 86400,
+          "0x0",
+          { gasLimit: 6e6 }
+        )
+      ).revertedWith("constructor::Invalid Argument. _fundingExpiration not > now");
+    });
 
-      it("should fail if contractExpiration less than now", async () => {
-        await expect(
-          _granteeFactory.create([_granteeAddress], [1000], _managerAddress, AddressZero, 1000, 0, 1, "0x0", {
-            gasLimit: 6e6
-          })
-        ).to.be.revertedWith("constructor::Invalid Argument. _contractExpiration not > now.");
-      });
+    it("should fail if contractExpiration less than now", async () => {
+      await expect(
+        _granteeFactory.create([_granteeAddress], [1000], _managerAddress, AddressZero, 1000, 0, 1, "0x0", {
+          gasLimit: 6e6
+        })
+      ).to.be.revertedWith("constructor::Invalid Argument. _contractExpiration not > now.");
+    });
 
-      it("should fail if there is no grantees ", async () => {
-        await expect(
-          _granteeFactory.create(
-            [],
-            [1000],
-            _managerAddress,
-            AddressZero,
-            1000,
-            currentTime + 86400,
-            currentTime + 86400 * 2,
-            "0x0",
-            { gasLimit: 6e6 }
-          )
-        ).to.be.revertedWith("constructor::Invalid Argument. Must have one or more grantees.");
-      });
+    it("should fail if there is no grantees ", async () => {
+      await expect(
+        _granteeFactory.create(
+          [],
+          [1000],
+          _managerAddress,
+          AddressZero,
+          1000,
+          currentTime + 86400,
+          currentTime + 86400 * 2,
+          "0x0",
+          { gasLimit: 6e6 }
+        )
+      ).to.be.revertedWith("constructor::Invalid Argument. Must have one or more grantees.");
+    });
 
-      it("should fail if number of grantees and amounts are unequal", async () => {
-        await expect(
-          _granteeFactory.create(
-            [_granteeAddress],
-            [],
-            _managerAddress,
-            AddressZero,
-            1000,
-            currentTime + 86400,
-            currentTime + 86400 * 2,
-            "0x0",
-            { gasLimit: 6e6 }
-          )
-        ).to.be.revertedWith("constructor::Invalid Argument. _grantees.length must equal _amounts.length");
-      });
+    it("should fail if number of grantees and amounts are unequal", async () => {
+      await expect(
+        _granteeFactory.create(
+          [_granteeAddress],
+          [],
+          _managerAddress,
+          AddressZero,
+          1000,
+          currentTime + 86400,
+          currentTime + 86400 * 2,
+          "0x0",
+          { gasLimit: 6e6 }
+        )
+      ).to.be.revertedWith("constructor::Invalid Argument. _grantees.length must equal _amounts.length");
+    });
 
-      it("should fail if one amount in amount array is not > 0", async () => {
-        await expect(
-          _granteeFactory.create(
-            [_granteeAddress],
-            [0],
-            _managerAddress,
-            AddressZero,
-            1000,
-            currentTime + 86400,
-            currentTime + 86400 * 2,
-            "0x0",
-            { gasLimit: 6e6 }
-          )
-        ).to.be.revertedWith("constructor::Invalid Argument. currentAmount must be greater than 0.");
-      });
+    it("should fail if one amount in amount array is not > 0", async () => {
+      await expect(
+        _granteeFactory.create(
+          [_granteeAddress],
+          [0],
+          _managerAddress,
+          AddressZero,
+          1000,
+          currentTime + 86400,
+          currentTime + 86400 * 2,
+          "0x0",
+          { gasLimit: 6e6 }
+        )
+      ).to.be.revertedWith("constructor::Invalid Argument. currentAmount must be greater than 0.");
+    });
 
-      it("should fail if duplicate grantee exists", async () => {
-        let _newGranteeAddress: string = _wallets[3].address;
-        await expect(
-          _granteeFactory.create(
-            [_granteeAddress, _newGranteeAddress, _granteeAddress],
-            [1000, 1000, 1000],
-            _managerAddress,
-            AddressZero,
-            3000,
-            currentTime + 86400,
-            currentTime + 86400 * 2,
-            "0x0",
-            { gasLimit: 6e6 }
-          )
-        ).to.be.revertedWith("constructor::Invalid Argument. Duplicate or out of order _grantees.");
-      });
+    it("should fail if duplicate grantee exists", async () => {
+      let _newGranteeAddress: string = _wallets[3].address;
+      await expect(
+        _granteeFactory.create(
+          [_granteeAddress, _newGranteeAddress, _granteeAddress],
+          [1000, 1000, 1000],
+          _managerAddress,
+          AddressZero,
+          3000,
+          currentTime + 86400,
+          currentTime + 86400 * 2,
+          "0x0",
+          { gasLimit: 6e6 }
+        )
+      ).to.be.revertedWith("constructor::Invalid Argument. Duplicate or out of order _grantees.");
+    });
 
-      it("should fail if manager is included in list of grantee", async () => {
-        await expect(
-          _granteeFactory.create(
-            [_granteeAddress],
-            [1000],
-            _granteeAddress,
-            AddressZero,
-            1000,
-            currentTime + 86400,
-            currentTime + 86400 * 2,
-            "0x0",
-            { gasLimit: 6e6 }
-          )
-        ).to.be.revertedWith("constructor::Invalid Argument. _manager cannot be a Grantee");
-      });
+    it("should fail if manager is included in list of grantee", async () => {
+      await expect(
+        _granteeFactory.create(
+          [_granteeAddress],
+          [1000],
+          _granteeAddress,
+          AddressZero,
+          1000,
+          currentTime + 86400,
+          currentTime + 86400 * 2,
+          "0x0",
+          { gasLimit: 6e6 }
+        )
+      ).to.be.revertedWith("constructor::Invalid Argument. _manager cannot be a Grantee");
+    });
 
-      it("should fail if targetFunding != totalFundingAmount", async () => {
-        let _newGranteeAddress: string = _wallets[3].address;
-        await expect(
-          _granteeFactory.create(
-            [_granteeAddress, _newGranteeAddress],
-            [1000, 1000],
-            _managerAddress,
-            AddressZero,
-            3000,
-            currentTime + 86400,
-            currentTime + 86400 * 2,
-            "0x0",
-            { gasLimit: 6e6 }
-          )
-        ).to.be.revertedWith("constructor::Invalid Argument. _targetFunding must equal totalFundingAmount.");
-      });
+    it("should fail if targetFunding != totalFundingAmount", async () => {
+      const _newGranteeAddress: string = _wallets[3].address;
+      await expect(
+        _granteeFactory.create(
+          [_granteeAddress, _newGranteeAddress],
+          [1000, 1000],
+          _managerAddress,
+          AddressZero,
+          3000,
+          currentTime + 86400,
+          currentTime + 86400 * 2,
+          "0x0",
+          { gasLimit: 6e6 }
+        )
+      ).to.be.revertedWith("constructor::Invalid Argument. _targetFunding must equal totalFundingAmount.");
+    });
 
-      it("should persist the correct overall funding target", async () => {
-        const targetFunding = await _grant.targetFunding();
-        expect(targetFunding).to.eq(1000);
-      });
+    it("should persist the correct overall funding target", async () => {
+      const targetFunding = await _grant.targetFunding();
+      expect(targetFunding).to.eq(1000);
+    });
 
-      it("should persist the correct grantee funding target", async () => {
-        const grantee = await _grant.grantees(_granteeAddress);
-        expect(grantee.targetFunding).to.eq(1000);
-      });
+    it("should persist the correct grantee funding target", async () => {
+      const grantee = await _grant.grantees(_granteeAddress);
+      expect(grantee.targetFunding).to.eq(1000);
+    });
 
-      it("should persist the correct manager", async () => {
-        const manager = await _grant.manager();
-        expect(manager).to.eq(_managerAddress);
-      });
+    it("should persist the correct manager", async () => {
+      const manager = await _grant.manager();
+      expect(manager).to.eq(_managerAddress);
+    });
 
-      it("should persist the correct currency", async () => {
-        const currency = await _grant.currency();
-        expect(currency).to.eq(_token.address);
-      });
+    it("should persist the correct currency", async () => {
+      const currency = await _grant.currency();
+      expect(currency).to.eq(_token.address);
+    });
 
-      it("should persist the correct fundingExpiration", async () => {
-        const fundingExpiration = await _grant.fundingExpiration();
-        expect(fundingExpiration).to.eq(_fundingExpiration);
-      });
+    it("should persist the correct fundingExpiration", async () => {
+      const fundingExpiration = await _grant.fundingExpiration();
+      expect(fundingExpiration).to.eq(_fundingExpiration);
+    });
 
-      it("should persist the correct contractExpiration", async () => {
-        const contractExpiration = await _grant.contractExpiration();
-        expect(contractExpiration).to.eq(_contractExpiration);
-      });
+    it("should persist the correct contractExpiration", async () => {
+      const contractExpiration = await _grant.contractExpiration();
+      expect(contractExpiration).to.eq(_contractExpiration);
+    });
 
-      it("should persist the correct grantStatus", async () => {
-        const cancelled = await _grant.grantCancelled();
-        expect(cancelled).to.be.false;
-      });
+    it("should persist the correct grant status", async () => {
+      const cancelled = await _grant.grantCancelled();
+      expect(cancelled).to.be.eq(false);
     });
   });
 });

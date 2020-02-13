@@ -485,15 +485,11 @@ describe("Grant", () => {
             gasPrice: 1
           });
 
-          // const totalFunding = await grantFromManagerWithEther.totalFunding();
-          // console.log(`total funding ${totalFunding}`);
-
           etherBalanceOfGrantee = await _provider.getBalance(_granteeWallet.address);
           const { totalPayed: _totalPayedOfGrantee } = await _grantFromManagerWithEther.grantees(
             _granteeWallet.address
           );
           totalPayedOfGrantee = _totalPayedOfGrantee;
-          //console.log(`totalPayedOfGrantee ${totalPayedOfGrantee}`);
 
           etherBalanceOfSecondGrantee = await _provider.getBalance(_secondGranteeWallet.address);
           const { totalPayed: _totalPayedOfSecondGrantee } = await _grantFromManagerWithEther.grantees(
