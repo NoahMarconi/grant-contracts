@@ -14,8 +14,8 @@ chai.use(waffle.solidity);
 const { expect, assert } = chai;
 
 describe("Grant", () => {
-  const _amounts = [1000];
-  const _targetFunding = _amounts.reduce((a, b) => a + b, 0);
+  const AMOUNT = [1000];
+  const TARGET_FUNDING = AMOUNT.reduce((a, b) => a + b, 0);
 
   async function fixture(provider: any, wallets: Wallet[]) {
     const currentTime = (await provider.getBlock(await provider.getBlockNumber())).timestamp;
@@ -26,10 +26,10 @@ describe("Grant", () => {
       Grant,
       [
         [granteeWallet.address],
-        _amounts,
+        AMOUNT,
         managerWallet.address,
         token.address,
-        _targetFunding,
+        TARGET_FUNDING,
         currentTime + 86400,
         currentTime + 86400 * 2
       ],
@@ -40,10 +40,10 @@ describe("Grant", () => {
       Grant,
       [
         [granteeWallet.address],
-        _amounts,
+        AMOUNT,
         managerWallet.address,
         AddressZero,
-        _targetFunding,
+        TARGET_FUNDING,
         currentTime + 86400,
         currentTime + 86400 * 2
       ],

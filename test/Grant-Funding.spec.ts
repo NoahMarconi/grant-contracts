@@ -12,7 +12,7 @@ chai.use(waffle.solidity);
 const { expect } = chai;
 
 describe("Grant", () => {
-  describe("When Funding & Approve refunding", () => {
+  describe("When Funding", () => {
     const AMOUNTS = [1000];
     const TARGET_FUNDING = AMOUNTS.reduce((a, b) => a + b, 0);
 
@@ -91,7 +91,6 @@ describe("Grant", () => {
 
       let _fundReceipt: any;
       const _fundAmountAfterFunding = 1e3;
-      const _refundAmount = 5e1;
 
       before(async () => {
         const {
@@ -114,28 +113,6 @@ describe("Grant", () => {
 
       it("should be funded by donor", async () => {
         expect(await _grantFromDonorWithEther.totalFunding()).to.eq(_fundAmountAfterFunding);
-      });
-
-      it("should revert if donor approves refund", async () => {
-        await expect(
-          _grantFromDonorWithEther.approveRefund(_fundAmountAfterFunding + _refundAmount, AddressZero)
-        ).to.be.revertedWith("onlyManager::Permission Error. Function can only be called by manager");
-      });
-
-      it("should revert if manager approves refund which exceeds the avaliable fund ", async () => {
-        await expect(
-          _grantFromManagerWithEther.approveRefund(_fundAmountAfterFunding + _refundAmount, AddressZero)
-        ).to.be.revertedWith("approveRefund::Invalid Argument. Amount is greater than Available Balance.");
-      });
-
-      it("should be refunded by manager", async () => {
-        await _grantFromManagerWithEther.approveRefund(_refundAmount, AddressZero);
-
-        const totalRefunded = await _grantFromManagerWithEther.totalRefunded();
-        expect(totalRefunded).to.eq(_refundAmount);
-
-        const availableBalance = await _grantFromDonorWithEther.availableBalance();
-        expect(availableBalance).to.eq(_fundAmountAfterFunding - _refundAmount);
       });
 
       it("should emit Events", async () => {
@@ -218,28 +195,6 @@ describe("Grant", () => {
 
       it("should be funded by donor", async () => {
         expect(await _grantFromDonor.totalFunding()).to.eq(FUND_AMOUNT);
-      });
-
-      it("should revert if donor approves refund", async () => {
-        await expect(_grantFromDonor.approveRefund(REFUND_AMOUNT, AddressZero)).to.be.revertedWith(
-          "onlyManager::Permission Error. Function can only be called by manager"
-        );
-      });
-
-      it("should revert if refunded by manager", async () => {
-        await expect(_grantFromManager.approveRefund(FUND_AMOUNT + REFUND_AMOUNT, AddressZero)).to.be.revertedWith(
-          "approveRefund::Invalid Argument. Amount is greater than Available Balance."
-        );
-      });
-
-      it("should be refunded by manager", async () => {
-        await _grantFromManager.approveRefund(REFUND_AMOUNT, AddressZero);
-
-        const totalRefunded = await _grantFromDonor.totalRefunded();
-        expect(totalRefunded).to.eq(REFUND_AMOUNT);
-
-        const availableBalance = await _grantFromDonor.availableBalance();
-        expect(availableBalance).to.eq(FUND_AMOUNT - REFUND_AMOUNT);
       });
 
       it("should emit Events", async () => {
