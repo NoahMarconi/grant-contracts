@@ -206,7 +206,7 @@ describe("Grant", () => {
     });
 
     it("should fail if duplicate grantee exists", async () => {
-      let _newGranteeAddress: string = _wallets[3].address;
+      const _newGranteeAddress: string = _wallets[3].address;
       await expect(
         _granteeFactory.create(
           [_granteeAddress, _newGranteeAddress, _granteeAddress],
