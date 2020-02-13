@@ -108,10 +108,7 @@ describe("Grant", () => {
 
         // Donor fund Ether
         _fundReceipt = await (
-          await _donorWallet.sendTransaction({
-            to: _grantFromDonorWithEther.address,
-            value: 1e6
-          })
+          await _donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: 1e6 })
         ).wait();
       });
 
@@ -177,6 +174,24 @@ describe("Grant", () => {
             value: 1e6
           })
         ).to.be.revertedWith("fund::Status Error. Grant not open to funding.");
+      });
+
+      describe("Funding", () => {
+        let _grantFromDonorWithEther: Contract;
+        let _donorWallet: Wallet;
+
+        before(async () => {
+          const { grantFromDonorWithEther, donorWallet } = await waffle.loadFixture(fixture);
+
+          _grantFromDonorWithEther = grantFromDonorWithEther;
+          _donorWallet = donorWallet;
+        });
+
+        it("should revert on funding zero ether", async () => {
+          await expect(
+            _donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: Zero })
+          ).to.be.revertedWith("fundWithEther::Invalid Value. msg.value be greater than 0.");
+        });
       });
     });
 
