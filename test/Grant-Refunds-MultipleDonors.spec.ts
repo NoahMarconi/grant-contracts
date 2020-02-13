@@ -19,8 +19,6 @@ describe("Grant", () => {
 
     async function fixtureForMoreDonors(provider: any, wallets: Wallet[]) {
       const [granteeWallet, secondGranteeWallet, donorWallet, secondDonorWallet, managerWallet] = wallets;
-      let balance = await provider.getBalance(donorWallet.address);
-      // console.log(`balance  ${balance}`);
 
       const GRANTEE_ADDRESSES = [granteeWallet.address, secondGranteeWallet.address];
 
@@ -208,7 +206,7 @@ describe("Grant", () => {
         //   `totalFunding ${totalFunding}, targetFunding ${TARGET_FUNDING}, totalRefunded ${totalRefunded}`
         // );
 
-        let newTotalFunding = totalFunding.sub(totalRefunded).add(DONOR_FUNDING);
+        const newTotalFunding = totalFunding.sub(totalRefunded).add(DONOR_FUNDING);
 
         const CHANGE = newTotalFunding > TARGET_FUNDING ? newTotalFunding.sub(TARGET_FUNDING) : 0;
         // console.log(
@@ -258,9 +256,9 @@ describe("Grant", () => {
         const balanceBeforeRefundForGrant = await _token.balanceOf(_grantFromManager.address);
 
         // refunding by first donor and balance calculations
-        let balanceBeforeRefundForDonor = await _token.balanceOf(_donorWallet.address);
+        const balanceBeforeRefundForDonor = await _token.balanceOf(_donorWallet.address);
         await _grantFromDonor.withdrawRefund(_donorWallet.address);
-        let balanceAfterRefundForDonor = await _token.balanceOf(_donorWallet.address);
+        const balanceAfterRefundForDonor = await _token.balanceOf(_donorWallet.address);
         // expect(balanceBeforeRefundForDonor.add(_REFUND_AMOUNT)).to.eq(
         //   balanceAfterRefundForDonor
         // );
@@ -311,8 +309,8 @@ describe("Grant", () => {
           await _grantFromDonor.fund(1e3);
           await _grantFromSecondDonor.fund(1e3);
 
-          let { refunded: _lastRefundOfDonor } = await _grantFromManager.donors(_donorWallet.address);
-          let { refunded: _lastRefundOfSecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
+          const { refunded: _lastRefundOfDonor } = await _grantFromManager.donors(_donorWallet.address);
+          const { refunded: _lastRefundOfSecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
           lastRefundOfDonor = _lastRefundOfDonor;
           lastRefundOfSecondDonor = _lastRefundOfSecondDonor;
 
@@ -326,15 +324,15 @@ describe("Grant", () => {
           await _grantFromManager.withdrawRefund(_secondDonorWallet.address);
 
           // Checking current refund balance
-          let { refunded: _lastRefundOfDonor } = await _grantFromManager.donors(_donorWallet.address);
-          let { refunded: _lastRefundOfSecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
+          const { refunded: _lastRefundOfDonor } = await _grantFromManager.donors(_donorWallet.address);
+          const { refunded: _lastRefundOfSecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
 
           expect(lastRefundOfDonor.add(500)).to.be.eq(_lastRefundOfDonor);
           expect(lastRefundOfSecondDonor.add(500)).to.be.eq(_lastRefundOfSecondDonor);
 
           // Checking current token balance
-          let _tokenBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
-          let _tokenBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
+          const _tokenBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
+          const _tokenBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
 
           expect(tokenBalanceOfDonor.add(500)).to.be.eq(_tokenBalanceOfDonor);
           expect(tokenBalanceOfSecondDonor.add(500)).to.be.eq(_tokenBalanceOfSecondDonor);
@@ -354,15 +352,15 @@ describe("Grant", () => {
           await _grantFromManager.withdrawRefund(_secondDonorWallet.address);
 
           // Checking current refund balance
-          let { refunded: _lastRefundOfDonor } = await _grantFromManager.donors(_donorWallet.address);
-          let { refunded: _lastRefundOfSecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
+          const { refunded: _lastRefundOfDonor } = await _grantFromManager.donors(_donorWallet.address);
+          const { refunded: _lastRefundOfSecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
 
           expect(lastRefundOfDonor.add(250)).to.be.eq(_lastRefundOfDonor);
           expect(lastRefundOfSecondDonor.add(250)).to.be.eq(_lastRefundOfSecondDonor);
 
           // Checking current token balance
-          let _tokenBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
-          let _tokenBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
+          const _tokenBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
+          const _tokenBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
 
           expect(tokenBalanceOfDonor.add(250)).to.be.eq(_tokenBalanceOfDonor);
           expect(tokenBalanceOfSecondDonor.add(250)).to.be.eq(_tokenBalanceOfSecondDonor);
@@ -382,15 +380,15 @@ describe("Grant", () => {
           await _grantFromManager.withdrawRefund(_secondDonorWallet.address);
 
           // Checking current refund balance.
-          let { refunded: _lastRefundOfDonor } = await _grantFromManager.donors(_donorWallet.address);
-          let { refunded: _lastRefundOfSecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
+          const { refunded: _lastRefundOfDonor } = await _grantFromManager.donors(_donorWallet.address);
+          const { refunded: _lastRefundOfSecondDonor } = await _grantFromManager.donors(_secondDonorWallet.address);
 
           expect(lastRefundOfDonor.add(250)).to.be.eq(_lastRefundOfDonor);
           expect(lastRefundOfSecondDonor.add(250)).to.be.eq(_lastRefundOfSecondDonor);
 
           // Checking current token balance check
-          let _tokenBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
-          let _tokenBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
+          const _tokenBalanceOfDonor = await _token.balanceOf(_donorWallet.address);
+          const _tokenBalanceOfSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
 
           expect(tokenBalanceOfDonor.add(250)).to.be.eq(_tokenBalanceOfDonor);
           expect(tokenBalanceOfSecondDonor.add(250)).to.be.eq(_tokenBalanceOfSecondDonor);
@@ -434,8 +432,8 @@ describe("Grant", () => {
           await _donorWallet.sendTransaction({ to: grantFromDonorWithEther.address, value: 1e3, gasPrice: 1 });
           await _secondDonorWallet.sendTransaction({ to: grantFromDonorWithEther.address, value: 1e3, gasPrice: 1 });
 
-          let { refunded: _lastRefundOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
-          let { refunded: _lastRefundOfSecondDonor } = await _grantFromManagerWithEther.donors(
+          const { refunded: _lastRefundOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
+          const { refunded: _lastRefundOfSecondDonor } = await _grantFromManagerWithEther.donors(
             _secondDonorWallet.address
           );
 
@@ -457,8 +455,8 @@ describe("Grant", () => {
           ).wait();
 
           // Checking current refund balance
-          let { refunded: _lastRefundOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
-          let { refunded: _lastRefundOfSecondDonor } = await _grantFromManagerWithEther.donors(
+          const { refunded: _lastRefundOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
+          const { refunded: _lastRefundOfSecondDonor } = await _grantFromManagerWithEther.donors(
             _secondDonorWallet.address
           );
 
@@ -466,8 +464,8 @@ describe("Grant", () => {
           expect(lastRefundOfSecondDonor.add(500)).to.be.eq(_lastRefundOfSecondDonor);
 
           // Checking current ether balance
-          let _etherBalanceOfDonor = await _provider.getBalance(_donorWallet.address);
-          let _etherBalanceOfSecondDonor = await _provider.getBalance(_secondDonorWallet.address);
+          const _etherBalanceOfDonor = await _provider.getBalance(_donorWallet.address);
+          const _etherBalanceOfSecondDonor = await _provider.getBalance(_secondDonorWallet.address);
 
           expect(etherBalanceOfDonor.add(500).sub(receiptForDonor.gasUsed)).to.be.eq(_etherBalanceOfDonor);
           expect(etherBalanceOfSecondDonor.add(500).sub(receiptForSecondDonor.gasUsed)).to.be.eq(
@@ -493,8 +491,8 @@ describe("Grant", () => {
           ).wait();
 
           // Checking current refund balance
-          let { refunded: _lastRefundOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
-          let { refunded: _lastRefundOfSecondDonor } = await _grantFromManagerWithEther.donors(
+          const { refunded: _lastRefundOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
+          const { refunded: _lastRefundOfSecondDonor } = await _grantFromManagerWithEther.donors(
             _secondDonorWallet.address
           );
 
@@ -502,8 +500,8 @@ describe("Grant", () => {
           expect(lastRefundOfSecondDonor.add(250)).to.be.eq(_lastRefundOfSecondDonor);
 
           // Checking current ether balance
-          let _etherBalanceOfDonor = await _provider.getBalance(_donorWallet.address);
-          let _etherBalanceOfSecondDonor = await _provider.getBalance(_secondDonorWallet.address);
+          const _etherBalanceOfDonor = await _provider.getBalance(_donorWallet.address);
+          const _etherBalanceOfSecondDonor = await _provider.getBalance(_secondDonorWallet.address);
 
           expect(etherBalanceOfDonor.add(250).sub(receiptForDonor.gasUsed)).to.be.eq(_etherBalanceOfDonor);
           expect(etherBalanceOfSecondDonor.add(250).sub(receiptForSecondDonor.gasUsed)).to.be.eq(
@@ -529,8 +527,8 @@ describe("Grant", () => {
           ).wait();
 
           // Checking current refund balance
-          let { refunded: _lastRefundOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
-          let { refunded: _lastRefundOfSecondDonor } = await _grantFromManagerWithEther.donors(
+          const { refunded: _lastRefundOfDonor } = await _grantFromManagerWithEther.donors(_donorWallet.address);
+          const { refunded: _lastRefundOfSecondDonor } = await _grantFromManagerWithEther.donors(
             _secondDonorWallet.address
           );
 
@@ -538,8 +536,8 @@ describe("Grant", () => {
           expect(lastRefundOfSecondDonor.add(150)).to.be.eq(_lastRefundOfSecondDonor);
 
           // Checking current ether balance
-          let _etherBalanceOfDonor = await _provider.getBalance(_donorWallet.address);
-          let _etherBalanceOfSecondDonor = await _provider.getBalance(_secondDonorWallet.address);
+          const _etherBalanceOfDonor = await _provider.getBalance(_donorWallet.address);
+          const _etherBalanceOfSecondDonor = await _provider.getBalance(_secondDonorWallet.address);
 
           expect(etherBalanceOfDonor.add(150).sub(receiptForDonor.gasUsed)).to.be.eq(_etherBalanceOfDonor);
           expect(etherBalanceOfSecondDonor.add(150).sub(receiptForSecondDonor.gasUsed)).to.be.eq(
