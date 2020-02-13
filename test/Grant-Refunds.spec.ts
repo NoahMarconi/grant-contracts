@@ -224,7 +224,7 @@ describe("Grant", () => {
       });
 
       it("should not reduce target funding for grantee", async () => {
-        let { targetFunding: targetFundingBeforeApproveFund } = await _grantFromManager.grantees(
+        const { targetFunding: targetFundingBeforeApproveFund } = await _grantFromManager.grantees(
           _granteeWallet.address
         );
 
@@ -232,7 +232,7 @@ describe("Grant", () => {
 
         await _grantFromManager.approveRefund(REFUND_AMOUNT, AddressZero);
 
-        let { targetFunding: targetFundingAfterApproveFund } = await _grantFromManager.grantees(_granteeWallet.address);
+        const { targetFunding: targetFundingAfterApproveFund } = await _grantFromManager.grantees(_granteeWallet.address);
 
         //  const targetFundingAfterApproveFund = targetFunding;
 
@@ -240,7 +240,7 @@ describe("Grant", () => {
       });
 
       it("should reduce target funding for grantee by refund amount", async () => {
-        let { targetFunding: targetFundingBeforeApproveFund } = await _grantFromManager.grantees(
+        const { targetFunding: targetFundingBeforeApproveFund } = await _grantFromManager.grantees(
           _granteeWallet.address
         );
 
@@ -248,7 +248,7 @@ describe("Grant", () => {
 
         await _grantFromManager.approveRefund(REFUND_AMOUNT, _granteeWallet.address);
 
-        let { targetFunding: targetFundingAfterApproveFund } = await _grantFromManager.grantees(_granteeWallet.address);
+        const { targetFunding: targetFundingAfterApproveFund } = await _grantFromManager.grantees(_granteeWallet.address);
 
         // const targetFundingAfterApproveFund = targetFunding;
 
