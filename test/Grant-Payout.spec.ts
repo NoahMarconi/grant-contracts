@@ -152,7 +152,6 @@ describe("Grant", () => {
 
       // always at last
       it("should revert if grant is already cancelled", async () => {
-        // await _grantFromDonor.fund(_fundAmount);
         await _grantFromManager.cancelGrant();
         await expect(_grantFromManager.approvePayout(_fundAmount, _granteeWallet.address)).to.be.revertedWith(
           "approvePayout::Status Error. Cannot approve if grant is cancelled."
@@ -234,7 +233,6 @@ describe("Grant", () => {
         });
 
         _initialEtherBalance = await _provider.getBalance(_granteeWallet.address);
-        //   console.log(`_initialEtherBalance ${_initialEtherBalance}`);
       });
 
       it("should not be updated yet", async () => {
@@ -447,7 +445,6 @@ describe("Grant", () => {
             "approvePayout::Invalid Argument. value cannot exceed remaining allocation."
           );
 
-          // const initialTotalPayedForSecondGrantee = _lastTotalPayedForSecondGrantee;
           await expect(_grantFromManager.approvePayout(approveAmount, _secondGranteeWallet.address)).to.be.revertedWith(
             "approvePayout::Invalid Argument. value cannot exceed remaining allocation."
           );
@@ -468,8 +465,6 @@ describe("Grant", () => {
             secondGranteeWallet,
             donorWallet,
             provider,
-            grantWithEther,
-            // grantFromDonorWithEther,
             grantFromManagerWithEther
           } = await waffle.loadFixture(fixtureWithMultipleGrantee);
 

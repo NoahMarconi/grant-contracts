@@ -111,7 +111,6 @@ describe("Grant", () => {
             value: 1e6
           })
         ).wait();
-        // console.log('Fund Receipt ' + JSON.stringify(_fundReceipt));
       });
 
       it("should be funded by donor", async () => {
@@ -143,7 +142,7 @@ describe("Grant", () => {
       it("should emit Events", async () => {
         const logFundingEvent: any[] = !_fundReceipt.events
           ? []
-          : _fundReceipt.events.filter((event: any) => event.event == "LogFunding");
+          : _fundReceipt.events.filter((event: any) => event.event === "LogFunding");
         for (const event of logFundingEvent) {
           const logFundingEvent = event.eventSignature;
           expect(logFundingEvent).to.eq("LogFunding(address,uint256)");
@@ -151,7 +150,7 @@ describe("Grant", () => {
 
         const LogFundingCompleteEvent: any[] = !_fundReceipt.events
           ? []
-          : _fundReceipt.events.filter((event: any) => event.event == "LogFundingComplete");
+          : _fundReceipt.events.filter((event: any) => event.event === "LogFundingComplete");
         for (const event of LogFundingCompleteEvent) {
           const logFundingEvent = event.eventSignature;
           expect(logFundingEvent).to.eq("LogFundingComplete()");
@@ -164,15 +163,14 @@ describe("Grant", () => {
       });
 
       it("should donor funding balances == fund amount", async () => {
-        const donor = await _grantFromDonorWithEther.donors(_donorWallet.address);
-        const { funded, refunded } = donor;
-
+        const { funded } = await _grantFromDonorWithEther.donors(_donorWallet.address);
+        
         expect(funded).to.eq(_fundAmountAfterFunding);
         //expect(refunded).to.eq(0);
       });
 
       it("should grant status to be true", async () => {
-        expect(await _grantFromDonor.canFund()).to.be.true;
+        expect(await _grantFromDonor.canFund()).to.be.eq(true);
       });
 
       // following test case should be last, because Grant is getting cancelled.
@@ -236,7 +234,7 @@ describe("Grant", () => {
       });
 
       it("should emit Events", async () => {
-        const logFundingEvent: any[] = _fundReceipt.events.filter((event: any) => event.event == "LogFunding");
+        const logFundingEvent: any[] = _fundReceipt.events.filter((event: any) => event.event === "LogFunding");
         for (const event of logFundingEvent) {
           const logFundingEvent = event.eventSignature;
           expect(logFundingEvent).to.eq("LogFunding(address,uint256)");
@@ -252,18 +250,14 @@ describe("Grant", () => {
       });
 
       it("should donor funding balances == fund amount", async () => {
-        const donor = await _grantFromDonor.donors(_donorWallet.address);
-        const { funded, refunded } = donor;
+        const { funded } = await _grantFromDonor.donors(_donorWallet.address);
         expect(funded).to.eq(_fundAmount);
         //expect(refunded).to.eq(0);
       });
 
       it("should grant status to be true", async () => {
-        expect(await _grantFromDonor.canFund()).to.be.true;
+        expect(await _grantFromDonor.canFund()).to.be.eq(true);
       });
-
-      // Pending
-      // fund::Transfer Error. ERC20 token transferFrom failed.
 
       it("should reject if donor fund ether for token funded grants", async () => {
         await expect(_grantFromDonor.fund(_fundAmount, { value: _fundAmount })).to.be.reverted;
