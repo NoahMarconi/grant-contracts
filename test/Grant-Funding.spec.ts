@@ -155,19 +155,33 @@ describe("Grant", () => {
 
       describe("Funding", () => {
         let _grantFromDonorWithEther: Contract;
-        let _donorWallet: Wallet;
+        let _donorWallet: Wallet, _managerWallet: Wallet, _granteeWallet: Wallet;
 
         before(async () => {
-          const { grantFromDonorWithEther, donorWallet } = await waffle.loadFixture(fixture);
+          const { grantFromDonorWithEther, donorWallet, managerWallet, granteeWallet } = await waffle.loadFixture(
+            fixture
+          );
 
           _grantFromDonorWithEther = grantFromDonorWithEther;
           _donorWallet = donorWallet;
+          _managerWallet = managerWallet;
+          _granteeWallet = granteeWallet;
         });
 
         it("should revert on funding zero ether", async () => {
           await expect(
             _donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: Zero })
           ).to.be.revertedWith("fundWithEther::Invalid Value. msg.value be greater than 0.");
+        });
+
+        it("should revert on funding by manager", async () => {
+          await expect(_managerWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: 500 })).to.be
+            .reverted;
+        });
+
+        it("should revert on funding by grantee", async () => {
+          await expect(_granteeWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: 500 })).to.be
+            .reverted;
         });
       });
     });
