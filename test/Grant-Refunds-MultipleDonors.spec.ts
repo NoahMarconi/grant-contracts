@@ -251,7 +251,7 @@ describe("Grant", () => {
         const totalFunding = await _grantFromManager.totalFunding();
         const totalRefunded = await _grantFromManager.totalRefunded();
 
-        console.log(`totalFunding ${totalFunding},  totalRefunded ${totalRefunded}`);
+        // console.log(`totalFunding ${totalFunding},  totalRefunded ${totalRefunded}`);
 
         const balanceBeforeRefundForGrant = await _token.balanceOf(_grantFromManager.address);
 
@@ -263,16 +263,16 @@ describe("Grant", () => {
         //   balanceAfterRefundForDonor
         // );
 
-        console.log(`For Donor - balance before ${balanceBeforeRefundForDonor},  after ${balanceAfterRefundForDonor}`);
+        // console.log(`For Donor - balance before ${balanceBeforeRefundForDonor},  after ${balanceAfterRefundForDonor}`);
 
         const balanceAfterRefundForGrant = await _token.balanceOf(_grantFromManager.address);
 
-        console.log(
-          `For Grant - balanceBeforeRefund ${balanceBeforeRefundForGrant},  balanceAfterRefunds ${balanceAfterRefundForGrant}`
-        );
+        // console.log(
+        //   `For Grant - balanceBeforeRefund ${balanceBeforeRefundForGrant},  balanceAfterRefunds ${balanceAfterRefundForGrant}`
+        // );
 
         const { funded, refunded } = await _grantFromManager.donors(_donorWallet.address);
-        console.log(`funded ${funded}, refunded ${refunded}`);
+        // console.log(`funded ${funded}, refunded ${refunded}`);
 
         expect(balanceBeforeRefundForGrant.sub(_REFUND_AMOUNT)).to.eq(balanceAfterRefundForGrant);
       });
