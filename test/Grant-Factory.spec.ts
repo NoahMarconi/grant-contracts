@@ -238,7 +238,7 @@ describe("Grant", () => {
           "0x0",
           { gasLimit: 6e6 }
         )
-      ).to.be.revertedWith("constructor::Invalid Argument. _manager cannot be a Grantee");
+      ).to.be.revertedWith("constructor::Invalid Argument. _manager cannot be a Grantee.");
     });
 
     it("should fail if targetFunding != totalFundingAmount", async () => {
