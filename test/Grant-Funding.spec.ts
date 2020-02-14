@@ -155,23 +155,14 @@ describe("Grant", () => {
 
       describe("Funding", () => {
         let _grantFromDonorWithEther: Contract;
-        let _donorWallet: Wallet, _managerWallet: Wallet, _granteeWallet: Wallet;
+        let _managerWallet: Wallet, _granteeWallet: Wallet;
 
         before(async () => {
-          const { grantFromDonorWithEther, donorWallet, managerWallet, granteeWallet } = await waffle.loadFixture(
-            fixture
-          );
+          const { grantFromDonorWithEther, managerWallet, granteeWallet } = await waffle.loadFixture(fixture);
 
           _grantFromDonorWithEther = grantFromDonorWithEther;
-          _donorWallet = donorWallet;
           _managerWallet = managerWallet;
           _granteeWallet = granteeWallet;
-        });
-
-        it("should revert on funding zero ether", async () => {
-          await expect(
-            _donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: Zero })
-          ).to.be.revertedWith("fundWithEther::Invalid Value. msg.value be greater than 0.");
         });
 
         it("should revert on funding by manager", async () => {
@@ -514,6 +505,14 @@ describe("Grant", () => {
 
           etherBalanceOfDonor = await _provider.getBalance(_donorWallet.address);
           etherBalanceOfSecondDonor = await _provider.getBalance(_secondDonorWallet.address);
+        });
+
+        it("should revert on funding zero ether", async () => {
+          await expect(
+            _donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: Zero, gasPrice: 1 })
+          ).to.be.revertedWith("fundWithEther::Invalid Value. msg.value be greater than 0.");
+
+          etherBalanceOfDonor = await _provider.getBalance(_donorWallet.address);
         });
 
         it("should be updated with initial funding", async () => {
