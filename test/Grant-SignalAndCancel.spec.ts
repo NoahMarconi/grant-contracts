@@ -5,7 +5,7 @@ import chai from "chai";
 import * as waffle from "ethereum-waffle";
 import { Contract, Wallet, constants } from "ethers";
 import { BigNumber } from "ethers/utils/bignumber";
-import { AddressZero } from "ethers/constants";
+import { AddressZero, Zero } from "ethers/constants";
 
 chai.use(waffle.solidity);
 const { expect, assert } = chai;
@@ -155,7 +155,7 @@ describe("Grant", () => {
           await token.mint(_donorWallet.address, 1e6);
         });
 
-        it("should fail if tokens no approved", async () => {
+        it("should fail if no tokens approved", async () => {
           await expect(_grantFromDonor.signal(_positiveSupport, 1)).to.be.revertedWith(
             "SafeMath: subtraction overflow"
           );
@@ -200,8 +200,8 @@ describe("Grant", () => {
           await token.approve(_grantFromDonor.address, 1e6);
         });
 
-        it("should reject if value is 0", async () => {
-          await expect(_grantFromDonor.signal(_positiveSupport, 0)).to.be.reverted;
+        it("should reject if value is zero", async () => {
+          await expect(_grantFromDonor.signal(_positiveSupport, Zero)).to.be.reverted;
         });
       });
     });

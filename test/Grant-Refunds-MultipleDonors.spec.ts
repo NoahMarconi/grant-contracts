@@ -97,7 +97,8 @@ describe("Grant", () => {
       };
     }
 
-    describe("Handling correct dilution for payout -> refund -> payout -> refund -> refund", () => {
+    describe(`Handling correct dilution for fund -> approve refund -> withdraw refund 
+                        - payout -> appove refund & withdraw refund`, () => {
       let _grantFromDonor: Contract, _grantFromSecondDonor: Contract, _grantFromManager: Contract, _token: Contract;
 
       let _donorWallet: Wallet, _secondDonorWallet: Wallet, _granteeWallet: Wallet, _secondGranteeWallet: Wallet;
@@ -128,34 +129,19 @@ describe("Grant", () => {
         await tokenFromSecondDonor.approve(grantFromSecondDonor.address, 1e6);
       });
 
-      it("should update balances of donor & grant on funding", async () => {
+      it("should update total funding of grant", async () => {
         // funding by multiple donors
-        const balanceBeforeFundingForGrant = await _token.balanceOf(_grantFromManager.address);
-
-        const balanceBeforeFundingForDonor = await _token.balanceOf(_donorWallet.address);
-
         await _grantFromDonor.fund(FUND_AMOUNT);
         await _grantFromSecondDonor.fund(FUND_AMOUNT);
 
         const balanceAfterFundingForGrant = await _token.balanceOf(_grantFromManager.address);
-
-        const balanceAfterFundingForDonor = await _token.balanceOf(_donorWallet.address);
-
-        // console.log(`Grant - balanceBefore ${balanceBeforeFundingForGrant}
-        //   balance after ${balanceAfterFundingForGrant}`);
-        // console.log(`First Donor - balanceBefore ${balanceBeforeFundingForDonor}
-        //   balance after ${balanceAfterFundingForDonor}`);
-
         expect(FUND_AMOUNT * 2).to.eq(balanceAfterFundingForGrant);
-        expect(balanceBeforeFundingForDonor).to.eq(balanceAfterFundingForDonor.add(FUND_AMOUNT));
       });
 
       it("should update total refunded on approval of refunding", async () => {
         const totalRefundedBeforeApproveRefund = await _grantFromManager.totalRefunded();
         await _grantFromManager.approveRefund(REFUND_AMOUNT, AddressZero);
         const totalRefundedAfterApproveRefund = await _grantFromManager.totalRefunded();
-        // console.log(`totalRefundedBeforeApproveRefund ${totalRefundedBeforeApproveRefund},
-        // totalRefundedAfterApproveRefund ${totalRefundedAfterApproveRefund}`);
         expect(totalRefundedBeforeApproveRefund.add(REFUND_AMOUNT)).to.eq(totalRefundedAfterApproveRefund);
       });
 
@@ -163,37 +149,39 @@ describe("Grant", () => {
         const balanceBeforeRefundForGrant = await _token.balanceOf(_grantFromManager.address);
 
         // first donor
-        let balanceBeforeRefundForDonor = await _token.balanceOf(_donorWallet.address);
+        const balanceBeforeRefundForDonor = await _token.balanceOf(_donorWallet.address);
         await _grantFromDonor.withdrawRefund(_donorWallet.address);
-        let balanceAfterRefundForDonor = await _token.balanceOf(_donorWallet.address);
+        const balanceAfterRefundForDonor = await _token.balanceOf(_donorWallet.address);
         expect(balanceBeforeRefundForDonor.add(5e2)).to.eq(balanceAfterRefundForDonor);
 
         // second donor
-        balanceBeforeRefundForDonor = await _token.balanceOf(_secondDonorWallet.address);
+        const balanceBeforeRefundForSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
         await _grantFromDonor.withdrawRefund(_secondDonorWallet.address);
-        balanceAfterRefundForDonor = await _token.balanceOf(_secondDonorWallet.address);
-        expect(balanceBeforeRefundForDonor.add(5e2)).to.eq(balanceAfterRefundForDonor);
+        const balanceAfterRefundForSecondDonor = await _token.balanceOf(_secondDonorWallet.address);
+        expect(balanceBeforeRefundForSecondDonor.add(5e2)).to.eq(balanceAfterRefundForSecondDonor);
 
+        // Checking Grant's token balance
         const balanceAfterRefundForGrant = await _token.balanceOf(_grantFromManager.address);
-
         expect(balanceBeforeRefundForGrant.sub(REFUND_AMOUNT)).to.eq(balanceAfterRefundForGrant);
       });
 
-      it("should update balances of grantees and Grant on payout to multiple grantee", async () => {
+      it("should update balances of multiple grantees and Grant on payout", async () => {
         const balanceBeforePayoutForGrant = await _token.balanceOf(_grantFromManager.address);
 
-        let balanceBeforePayoutForDonor = await _token.balanceOf(_granteeWallet.address);
+        // first grantee
+        const balanceBeforePayoutForGrantee = await _token.balanceOf(_granteeWallet.address);
         await _grantFromManager.approvePayout(5e2, _granteeWallet.address);
-        let balanceAfterPayoutForDonor = await _token.balanceOf(_granteeWallet.address);
-        expect(balanceBeforePayoutForDonor.add(5e2)).to.eq(balanceAfterPayoutForDonor);
+        const balanceAfterPayoutForGrantee = await _token.balanceOf(_granteeWallet.address);
+        expect(balanceBeforePayoutForGrantee.add(5e2)).to.eq(balanceAfterPayoutForGrantee);
 
-        balanceBeforePayoutForDonor = await _token.balanceOf(_secondGranteeWallet.address);
+        // second grantee
+        const balanceBeforePayoutForSecondGrantee = await _token.balanceOf(_secondGranteeWallet.address);
         await _grantFromManager.approvePayout(5e2, _secondGranteeWallet.address);
-        balanceAfterPayoutForDonor = await _token.balanceOf(_secondGranteeWallet.address);
-        expect(balanceBeforePayoutForDonor.add(5e2)).to.eq(balanceAfterPayoutForDonor);
+        const balanceAfterPayoutForSecondGrantee = await _token.balanceOf(_secondGranteeWallet.address);
+        expect(balanceBeforePayoutForSecondGrantee.add(5e2)).to.eq(balanceAfterPayoutForSecondGrantee);
 
+        // Checking Grant's token balance
         const balanceAfterPayoutForGrant = await _token.balanceOf(_grantFromManager.address);
-
         expect(balanceBeforePayoutForGrant.sub(5e2).sub(5e2)).to.eq(balanceAfterPayoutForGrant);
       });
 
@@ -248,20 +236,20 @@ describe("Grant", () => {
         // const _PARTIAL_REFUND_AMOUNT = 5e2;
         const _REFUND_AMOUNT = 1e3;
 
-        const totalFunding = await _grantFromManager.totalFunding();
-        const totalRefunded = await _grantFromManager.totalRefunded();
+        // const totalFunding = await _grantFromManager.totalFunding();
+        // const totalRefunded = await _grantFromManager.totalRefunded();
 
         // console.log(`totalFunding ${totalFunding},  totalRefunded ${totalRefunded}`);
 
         const balanceBeforeRefundForGrant = await _token.balanceOf(_grantFromManager.address);
 
+        await _grantFromManager.approveRefund(REFUND_AMOUNT, AddressZero);
+
         // refunding by first donor and balance calculations
         const balanceBeforeRefundForDonor = await _token.balanceOf(_donorWallet.address);
         await _grantFromDonor.withdrawRefund(_donorWallet.address);
         const balanceAfterRefundForDonor = await _token.balanceOf(_donorWallet.address);
-        // expect(balanceBeforeRefundForDonor.add(_REFUND_AMOUNT)).to.eq(
-        //   balanceAfterRefundForDonor
-        // );
+        expect(balanceBeforeRefundForDonor.add(_REFUND_AMOUNT)).to.eq(balanceAfterRefundForDonor);
 
         // console.log(`For Donor - balance before ${balanceBeforeRefundForDonor},  after ${balanceAfterRefundForDonor}`);
 
@@ -271,7 +259,7 @@ describe("Grant", () => {
         //   `For Grant - balanceBeforeRefund ${balanceBeforeRefundForGrant},  balanceAfterRefunds ${balanceAfterRefundForGrant}`
         // );
 
-        const { funded, refunded } = await _grantFromManager.donors(_donorWallet.address);
+        // const { funded, refunded } = await _grantFromManager.donors(_donorWallet.address);
         // console.log(`funded ${funded}, refunded ${refunded}`);
 
         expect(balanceBeforeRefundForGrant.sub(_REFUND_AMOUNT)).to.eq(balanceAfterRefundForGrant);
