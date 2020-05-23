@@ -91,7 +91,7 @@ describe("Grant", () => {
         grantFromDonorWithEther,
         grantFromSecondDonorWithEther,
         grantFromManagerWithEther,
-        fundingExpiration: currentTime + 86400,
+        fundingDeadline: currentTime + 86400,
         contractExpiration: currentTime + 86400 * 2,
         provider
       };
