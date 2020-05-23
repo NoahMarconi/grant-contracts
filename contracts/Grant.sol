@@ -47,19 +47,19 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
     {
 
         require(
-            _fundingDeadline == 0 || _fundingDeadline < _contractExpiration,
+            _fundingDeadline != 0 && _fundingDeadline < _contractExpiration,
             "constructor::Invalid Argument. _fundingDeadline not < _contractExpiration."
         );
 
         require(
         // solium-disable-next-line security/no-block-members
-            _fundingDeadline == 0 || _fundingDeadline > now,
+            _fundingDeadline != 0 && _fundingDeadline > now,
             "constructor::Invalid Argument. _fundingDeadline not > now."
         );
 
         require(
         // solium-disable-next-line security/no-block-members
-            _contractExpiration == 0 || _contractExpiration > now,
+            _contractExpiration != 0 && _contractExpiration > now,
             "constructor::Invalid Argument. _contractExpiration not > now."
         );
 
@@ -110,7 +110,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         }
 
         require(
-            totalFundingAmount == _targetFunding,
+            (_targetFunding != 0 && totalFundingAmount == _targetFunding),
             "constructor::Invalid Argument. _targetFunding must equal totalFundingAmount."
         );
 
@@ -154,6 +154,8 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
 
     /**
      * @dev Funding status check.
+     * `fundingDeadline` may be 0, in which case `now` does not impact canFund response.
+     * `targetFunding` may be 0, in which case `totalFunding` oes not impact can fund response.
      * @return true if can fund grant.
      */
     function canFund()
@@ -164,7 +166,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         return (
             // solium-disable-next-line security/no-block-members
             (fundingDeadline == 0 || fundingDeadline > now) &&
-            totalFunding < targetFunding &&
+            (targetFunding == 0 || totalFunding < targetFunding) &&
             !grantCancelled
         );
     }
@@ -348,64 +350,6 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         totalRefunded = totalRefunded.add(value);
 
         emit LogRefundApproval(value, totalRefunded);
-    }
-
-
-    /*----------  Signal Methods  ----------*/
-
-    /**
-     * @dev Voting Signal Method.
-     * @param support true if in support of grant false if opposed.
-     * @param value Number of signals denoted in Token ATOMIC_UNITS or WEI.
-     * @return True if successful, otherwise false.
-     */
-    function signal(bool support, uint256 value)
-        external
-        payable
-        returns (bool)
-    {
-
-        require(
-            totalFunding < targetFunding,
-            "signal::Status Error. Funding target reached."
-        );
-
-        emit LogSignal(support, msg.sender, currency, value);
-
-        // Prove signaler has control of funds.
-        if (currency == address(0)) {
-            require(
-                msg.value == value,
-                "signal::Invalid Argument. value must match msg.value."
-            );
-
-            require(
-                // solium-disable-next-line security/no-send
-                msg.sender.send(msg.value),
-                "signal::Transfer Error. Unable to send msg.value back to sender."
-            );
-        } else {
-            require(
-                msg.value == 0,
-                "signal::Currency Error. Cannot send Ether to a token funded grant."
-            );
-
-            // Transfer to this contract.
-            require(
-                IERC20(currency)
-                    .transferFrom(msg.sender, address(this), value),
-                "signal::Transfer Error. ERC20 token transferFrom failed."
-            );
-
-            // Transfer back to sender.
-            require(
-                IERC20(currency)
-                    .transfer(msg.sender, value),
-                "signal::Transfer Error. ERC20 token transfer failed."
-            );
-        }
-
-        return true;
     }
 
 
