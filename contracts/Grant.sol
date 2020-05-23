@@ -506,7 +506,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         }
 
         // Update global state.
-        totalGranteeAllocation == totalFunding;
+        totalGranteeAllocation = totalFunding;
     }
 
     /*----------  Fallback  ----------*/
