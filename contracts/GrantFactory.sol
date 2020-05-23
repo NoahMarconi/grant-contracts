@@ -15,7 +15,7 @@ contract GrantFactory {
 
 
     /*----------  Globals  ----------*/
-    uint256 id;
+    uint256 public id;
     mapping(uint256 => address) internal grants;  // Grants mapped by GUID.
 
 

@@ -100,7 +100,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
             );
 
             require(
-                currentGrantee != _manager,
+                currentGrantee != _manager, //@audit-ok do we really want this to be this way? I feel this is a kind of "fake" sybil resistance mechanism
                 "constructor::Invalid Argument. _manager cannot be a Grantee."
             );
 
@@ -110,7 +110,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         }
 
         require(
-            totalFundingAmount == _targetFunding,
+            totalFundingAmount == _targetFunding, //@audit-ok we could just assume this instead of enforcing it
             "constructor::Invalid Argument. _targetFunding must equal totalFundingAmount."
         );
 
@@ -204,7 +204,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
 
         uint256 newTotalFunding = totalFunding.add(value);
 
-        uint256 change;
+        uint256 change = 0;
         if(newTotalFunding > targetFunding) {
             change = newTotalFunding.sub(targetFunding);
             newTotalFunding = targetFunding;
@@ -278,7 +278,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         } else {
             require(
                 IERC20(currency)
-                    .transfer(grantee, value),
+                    .transfer(grantee, value), //@audit ERC777 is an example of an approved token standard that enables reentrancy in this function. Even though it is apparently harmless in this case, it is something to consider
                 "approvePayout::Transfer Error. ERC20 token transfer failed."
             );
         }
@@ -312,7 +312,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
             );
         }
 
-        totalRefunded = totalRefunded.add(availableBalance());
+        totalRefunded = totalRefunded.add(availableBalance());//@audit SELF REMINDER: check how this holds up with `availableBalance()`
 
         grantCancelled = true;
 
@@ -373,7 +373,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         emit LogSignal(support, msg.sender, currency, value);
 
         // Prove signaler has control of funds.
-        if (currency == address(0)) {
+        if (currency == address(0)) { //@audit why do it this way when we could just check balances?
             require(
                 msg.value == value,
                 "signal::Invalid Argument. value must match msg.value."
@@ -390,7 +390,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
                 "signal::Currency Error. Cannot send Ether to a token funded grant."
             );
 
-            // Transfer to this contract.
+            // Transfer to this contract. @audit why not just check `balanceOf()`?
             require(
                 IERC20(currency)
                     .transferFrom(msg.sender, address(this), value),
@@ -424,7 +424,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
     {
 
         uint256 percentContributed = donors[donor].funded
-            .mul(ATOMIC_UNITS).div(
+            .mul(ATOMIC_UNITS).div( // @audit-ok one thing to consider might be that tokens with exceptionally high decimal case digits might break this. Even though there are no such cases in the wild (sensible ones, at least) the standard does not forbid it
                 totalFunding
             );
 
@@ -439,7 +439,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         );
 
         // Minus previous withdrawals.
-        eligibleRefund = eligibleRefund.sub(donors[donor].refunded);
+        eligibleRefund = eligibleRefund.sub(donors[donor].refunded); // @audit-ok safemath is unnecessary here given the condition above
 
         // Update state.
         donors[donor].refunded = donors[donor].refunded.add(eligibleRefund);
@@ -467,7 +467,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
 
     /*----------  Private Methods  ----------*/
 
-    function fundWithEther(uint256 value, uint256 change)
+    function fundWithEther(uint256 value, uint256 change) //@audit-ok I'm not entirely sure having `change` as a parameter here is the best design choice
         private
     {
         require(
@@ -490,7 +490,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         }
     }
 
-    function fundWithToken(uint256 value, uint256 change)
+    function fundWithToken(uint256 value, uint256 change) //@audit-ok I'm not entirely sure having `change` as a parameter here is the best design choice
         private
     {
         require(
