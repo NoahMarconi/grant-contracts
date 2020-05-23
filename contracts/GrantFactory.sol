@@ -69,7 +69,7 @@ contract GrantFactory {
         grants[grantId] = grantAddress;
 
         // Increment id counter.
-        id += 1;
+        id = id.add(1);
 
         emit LogNewGrant(grantId, grantAddress);
 
