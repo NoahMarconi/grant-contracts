@@ -77,7 +77,7 @@ describe("Grant", () => {
         granteeWallet,
         donorWallet,
         managerWallet,
-        fundingExpiration: currentTime + 86400,
+        fundingDeadline: currentTime + 86400,
         contractExpiration: currentTime + 86400 * 2,
         provider,
         TARGET_FUNDING
