@@ -143,6 +143,17 @@ contract AbstractGrant {
         public
         returns(bool);
 
+
+    /**
+     * @dev Withdraws portion of the contract's available balance.
+     *      Amount grantee receives is their total payoutApproved - totalPaid.
+     * @param grantee Grantee address to refund.
+     * @return true if withdraw successful.
+     */
+    function withdrawPayout(address payable grantee)
+        public
+        returns(bool);
+
     /**
      * @dev Cancel grant and enable refunds.
      */
