@@ -1,5 +1,4 @@
 pragma solidity >=0.5.10 <0.6.0;
-pragma experimental ABIEncoderV2;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
@@ -22,6 +21,11 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
     uint256 ATOMIC_UNITS = 10 ** 18;
 
 
+    /*----------  Global Variables  ----------*/
+
+    uint256 totalGranteeAllocation; // Check _targetFunding against sum of _amounts array.
+                                    // OR used to calculate proportions of targetFunding is 0.
+    address[] granteeReference;     // Reference to grantee addresses to allow for allocation top up.
     /*----------  Constructor  ----------*/
 
     /**
@@ -80,9 +84,6 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         fundingDeadline = _fundingDeadline;
         contractExpiration = _contractExpiration;
 
-        // Check _targetFunding against sum of _amounts array.
-        uint256 totalFundingAmount;
-
         // Initialize Grantees.
         address lastAddress = address(0);
         for (uint256 i = 0; i < _grantees.length; i++) {
@@ -104,14 +105,17 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
                 "constructor::Invalid Argument. _manager cannot be a Grantee."
             );
 
-            totalFundingAmount = totalFundingAmount.add(currentAmount);
+            totalGranteeAllocation = totalGranteeAllocation.add(currentAmount);
             lastAddress = currentGrantee;
             grantees[currentGrantee].targetFunding = currentAmount;
+
+            // Store address as reference.
+            granteeReference.push(currentGrantee);
         }
 
         require(
-            (_targetFunding != 0 && totalFundingAmount == _targetFunding),
-            "constructor::Invalid Argument. _targetFunding must equal totalFundingAmount."
+            (_targetFunding != 0 && totalGranteeAllocation == _targetFunding),
+            "constructor::Invalid Argument. _targetFunding != totalGranteeAllocation."
         );
 
     }
@@ -218,6 +222,11 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
 
         // Update funding tally.
         totalFunding = newTotalFunding;
+
+        // Perpetual funding.
+        if(targetFunding == 0 && totalFunding > totalGranteeAllocation) {
+            addFundsToGranteeAllocation();
+        }
 
         // Defer to correct funding method.
         if(currency == address(0)) {
@@ -347,7 +356,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
      */
     function withdrawRefund(address payable donor)
         public
-        nonReentrant
+        nonReentrant // OpenZeppelin mutex due to sending funds.
         returns(bool)
     {
 
@@ -400,7 +409,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
      */
     function withdrawPayout(address payable grantee)
         public
-        nonReentrant
+        nonReentrant // OpenZeppelin mutex due to sending funds.
         returns(bool)
     {
 
@@ -475,6 +484,30 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         );
     }
 
+    function addFundsToGranteeAllocation()
+        private
+    {
+
+        for (uint256 i = 0; i < granteeReference.length; i++) {
+
+            address grantee = granteeReference[i];
+
+            uint256 percentAllocated = grantees[grantee].targetFunding
+                .mul(ATOMIC_UNITS).div(
+                    totalGranteeAllocation
+                );
+
+            // Grantee's share of funding.
+            uint256 eligibleAllocation = totalFunding
+                .mul(percentAllocated)
+                .div(ATOMIC_UNITS);
+
+            grantees[grantee].targetFunding = eligibleAllocation;
+        }
+
+        // Update global state.
+        totalGranteeAllocation == totalFunding;
+    }
 
     /*----------  Fallback  ----------*/
 

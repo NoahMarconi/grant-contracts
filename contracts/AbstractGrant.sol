@@ -1,5 +1,5 @@
 pragma solidity >=0.5.10 <0.6.0;
-pragma experimental ABIEncoderV2;
+
 
 /**
  * @title Grants Spec Abstract Contract.
@@ -132,7 +132,6 @@ contract AbstractGrant {
     function approveRefund(uint256 value, address grantee)
         public;
 
-
     /**
      * @dev Withdraws portion of the contract's available balance.
      *      Amount donor receives is proportionate to their funding contribution.
@@ -142,7 +141,6 @@ contract AbstractGrant {
     function withdrawRefund(address donor)
         public
         returns(bool);
-
 
     /**
      * @dev Withdraws portion of the contract's available balance.
