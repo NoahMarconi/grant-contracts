@@ -424,7 +424,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
     {
 
         uint256 percentContributed = donors[donor].funded
-            .mul(ATOMIC_UNITS).div(
+            .mul(ATOMIC_UNITS).div( // @audit-ok one thing to consider might be that tokens with exceptionally high decimal case digits might break this. Even though there are no such cases in the wild (sensible ones, at least) the standard does not forbid it
                 totalFunding
             );
 
