@@ -148,8 +148,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
     {
         return totalFunding
             .sub(totalPaid)
-            .sub(totalRefunded)
-            .sub(pendingPayments);
+            .sub(totalRefunded);
     }
 
     /**
@@ -241,7 +240,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
     /*----------  Manager Methods  ----------*/
 
     /**
-     * @dev Approve and make payment to a grantee.
+     * @dev Approve payment to a grantee.
      * @param value Amount in WEI or ATOMIC_UNITS to fund.
      * @param grantee Recipient of payment.
      */
@@ -252,7 +251,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
     {
 
         require(
-            targetFunding == totalFunding,
+            (targetFunding != 0 && targetFunding == totalFunding),
             "approvePayout::Status Error. Cannot approve if funding target not met."
         );
 
@@ -268,24 +267,9 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
 
         // Update state.
         totalPaid = totalPaid.add(value);
-        grantees[grantee].totalPaid = grantees[grantee].totalPaid.add(value);
+        grantees[grantee].payoutApproved = grantees[grantee].payoutApproved.add(value);
 
-        // Send funds.
-        if (currency == address(0)) {
-            require(
-                // solium-disable-next-line security/no-send
-                msg.sender.send(value),
-                "approvePayout::Transfer Error. Unable to send value to Grantee."
-            );
-        } else {
-            require(
-                IERC20(currency)
-                    .transfer(grantee, value),
-                "approvePayout::Transfer Error. ERC20 token transfer failed."
-            );
-        }
-
-        emit LogPayment(grantee, value);
+        emit LogPaymentApproval(grantee, value);
 
         return true;
     }
@@ -361,7 +345,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
      * @param donor Donor address to refund.
      * @return true if withdraw successful.
      */
-    function withdrawRefund(address donor)
+    function withdrawRefund(address payable donor)
         public
         nonReentrant
         returns(bool)
@@ -392,7 +376,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         if (currency == address(0)) {
             require(
                 // solium-disable-next-line security/no-send
-                msg.sender.send(eligibleRefund),
+                donor.send(eligibleRefund),
                 "withdrawRefund::Transfer Error. Unable to send refundValue to Donor."
             );
         } else {
@@ -406,6 +390,46 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         emit LogRefund(donor, eligibleRefund);
 
         return true;
+    }
+
+    /**
+     * @dev Withdraws portion of the contract's available balance.
+     *      Amount grantee receives is their total payoutApproved - totalPaid.
+     * @param grantee Grantee address to refund.
+     * @return true if withdraw successful.
+     */
+    function withdrawPayout(address payable grantee)
+        public
+        nonReentrant
+        returns(bool)
+    {
+
+        // Amount to be paid.
+        // Will throw if grantees[grantee].payoutApproved < grantees[grantee].totalPaid
+        uint256 eligiblePayout = grantees[grantee].payoutApproved
+            .sub(grantees[grantee].totalPaid);
+
+
+        // Update state.
+        grantees[grantee].totalPaid = grantees[grantee].totalPaid
+            .add(eligiblePayout);
+
+        // Send funds.
+        if (currency == address(0)) {
+            require(
+                // solium-disable-next-line security/no-send
+                grantee.send(eligiblePayout),
+                "approvePayout::Transfer Error. Unable to send value to Grantee."
+            );
+        } else {
+            require(
+                IERC20(currency)
+                    .transfer(grantee, eligiblePayout),
+                "approvePayout::Transfer Error. ERC20 token transfer failed."
+            );
+        }
+
+        emit LogPayment(grantee, eligiblePayout);
     }
 
 

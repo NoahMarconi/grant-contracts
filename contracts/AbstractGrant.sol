@@ -16,8 +16,7 @@ contract AbstractGrant {
     uint256 public totalFunding;                 // Cumulative funding donated by donors.
     uint256 public totalPaid;                    // Cumulative funding paid to grantees.
     uint256 public totalRefunded;                // Cumulative funding refunded to donors.
-    uint256 public pendingPayments;              // Payments approved to grantees but not yet withdrawn.
-    uint256 public fundingDeadline;            // (Optional) Date after which signal OR funds cannot be sent.
+    uint256 public fundingDeadline;              // (Optional) Date after which signal OR funds cannot be sent.
     uint256 public contractExpiration;           // (Optional) Date after which payouts must be complete or anyone can trigger refunds.
     bool public grantCancelled;                  // Flag to indicate when grant is cancelled.
     mapping(address => Grantee) public grantees; // Grant recipients by address.
@@ -27,7 +26,7 @@ contract AbstractGrant {
 
     struct Grantee {
         uint256 targetFunding;   // Funding amount targeted for Grantee.
-        uint256 totalPaid;      // Cumulative funding received by Grantee.
+        uint256 totalPaid;       // Cumulative funding received by Grantee.
         uint256 payoutApproved;  // Pending payout approved by Manager.
     }
 
