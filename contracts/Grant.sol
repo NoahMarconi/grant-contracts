@@ -205,8 +205,8 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
 
         uint256 newTotalFunding = totalFunding.add(value);
 
-        uint256 change;
-        if(newTotalFunding > targetFunding) {
+        uint256 change = 0;
+        if(targetFunding != 0 && newTotalFunding > targetFunding) {
             change = newTotalFunding.sub(targetFunding);
             newTotalFunding = targetFunding;
         }
@@ -229,7 +229,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
         // Log events.
         emit LogFunding(msg.sender, value.sub(change));
 
-        if(totalFunding == targetFunding) {
+        if(targetFunding != 0 && totalFunding == targetFunding) {
             emit LogFundingComplete();
         }
 
