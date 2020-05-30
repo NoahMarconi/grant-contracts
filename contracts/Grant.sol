@@ -473,7 +473,7 @@ contract Grant is AbstractGrant, ReentrancyGuard {
 
         require(
             msg.value > 0,
-            "fundWithEther::Invalid Value. msg.value be greater than 0."
+            "fundWithEther::Invalid Value. msg.value must be greater than 0."
         );
 
         // Send change as refund.
@@ -492,6 +492,11 @@ contract Grant is AbstractGrant, ReentrancyGuard {
         require(
             msg.value == 0,
             "fundWithToken::Currency Error. Cannot send Ether to a token funded grant."
+        );
+
+        require(
+            value > 0,
+            "fundWithToken::::Invalid Value. value must be greater than 0."
         );
 
         // Subtract change before transferring to grant contract.
