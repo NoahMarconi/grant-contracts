@@ -61,9 +61,12 @@ describe("Grant-Funding", () => {
       // Initial token balance.
       await token.mint(donorWallet.address, 1e6);
 
+<<<<<<< HEAD:test/ManagedCapped/Grant-Funding.spec.ts
       const tokenFromManager: Contract = new Contract(token.address, GrantToken.abi, managerWallet);
       const tokenFromGrantee: Contract = new Contract(token.address, GrantToken.abi, granteeWallet);
 
+=======
+>>>>>>> 1a49611ae0d0c23ee81ec06563b012dd49cfcb32:test/Grant-Funding.spec.ts
       const grantFromDonorWithToken: Contract = new Contract(grantFromGranteeWithToken.address, Grant.abi, donorWallet);
       const grantFromDonorWithEther: Contract = new Contract(grantFromGranteeWithEther.address, Grant.abi, donorWallet);
       const grantFromManagerWithToken: Contract = new Contract(grantFromGranteeWithToken.address, Grant.abi, managerWallet);
@@ -77,9 +80,13 @@ describe("Grant-Funding", () => {
         grantFromDonorWithEther,
         grantFromManagerWithToken,
         grantFromManagerWithEther,
+<<<<<<< HEAD:test/ManagedCapped/Grant-Funding.spec.ts
         tokenFromDonor: token,
         tokenFromGrantee,
         tokenFromManager,
+=======
+        token,
+>>>>>>> 1a49611ae0d0c23ee81ec06563b012dd49cfcb32:test/Grant-Funding.spec.ts
         granteeWallet,
         donorWallet,
         managerWallet,
@@ -94,8 +101,12 @@ describe("Grant-Funding", () => {
       let _grantFromDonorWithEther: Contract;
       let _grantFromManagerWithEther: Contract;
       let _donorWallet: Wallet;
+<<<<<<< HEAD:test/ManagedCapped/Grant-Funding.spec.ts
       let _provider: any;
       let _TARGET_FUNDING: any;
+=======
+
+>>>>>>> 1a49611ae0d0c23ee81ec06563b012dd49cfcb32:test/Grant-Funding.spec.ts
       const FUND_AMOUNT = 1e3;
 
       beforeEach(async () => {
@@ -103,19 +114,26 @@ describe("Grant-Funding", () => {
           grantFromDonorWithEther,
           grantFromManagerWithEther,
           donorWallet,
+<<<<<<< HEAD:test/ManagedCapped/Grant-Funding.spec.ts
           provider,
           TARGET_FUNDING
+=======
+>>>>>>> 1a49611ae0d0c23ee81ec06563b012dd49cfcb32:test/Grant-Funding.spec.ts
         } = await waffle.loadFixture(fixture);
 
         _grantFromDonorWithEther = grantFromDonorWithEther;
         _grantFromManagerWithEther = grantFromManagerWithEther;
         _donorWallet = donorWallet;
+<<<<<<< HEAD:test/ManagedCapped/Grant-Funding.spec.ts
         _provider = provider;
         _TARGET_FUNDING = TARGET_FUNDING;
+=======
+>>>>>>> 1a49611ae0d0c23ee81ec06563b012dd49cfcb32:test/Grant-Funding.spec.ts
 
       });
       
       it("should emit Events", async () => {
+<<<<<<< HEAD:test/ManagedCapped/Grant-Funding.spec.ts
         await expect(_donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: FUND_AMOUNT / 2 }))
         .to.emit(_grantFromDonorWithEther, 'LogFunding')
         .withArgs(_donorWallet.address, FUND_AMOUNT / 2);
@@ -171,6 +189,47 @@ describe("Grant-Funding", () => {
           ).to.be.revertedWith("fund::Status Error. Grant not open to funding.");
         });
 
+=======
+        await expect(_donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: FUND_AMOUNT/2 }))
+        .to.emit(_grantFromDonorWithEther, 'LogFunding')
+        .withArgs(_donorWallet.address, FUND_AMOUNT/2);
+        
+        await expect(_donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: FUND_AMOUNT/2 }))
+        .to.emit(_grantFromDonorWithEther, 'LogFundingComplete');
+      });
+
+      describe("When donor sends FUND_AMOUNT", () => {
+
+        beforeEach(async () => {
+          await (_donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: FUND_AMOUNT }));
+        });
+
+        it("should be funded by donor", async () => {
+          const totalFunding = (await _grantFromDonorWithEther.totalFunding()).toNumber();
+          expect(totalFunding).to.eq(FUND_AMOUNT);
+        });
+  
+        it("donor's funding balances should equal to fund amount", async () => {
+          const { funded } = await _grantFromDonorWithEther.donors(_donorWallet.address);
+          expect(funded).to.eq(FUND_AMOUNT);
+        });
+  
+        it("should set canFund to false", async () => {
+          expect(await _grantFromDonorWithEther.canFund()).to.be.eq(false);
+        });
+  
+        // Following test case should be last, because Grant is getting cancelled.
+        it("should reject funding if grant is already cancelled", async () => {
+          await _grantFromManagerWithEther.cancelGrant();
+          await expect(
+            _donorWallet.sendTransaction({
+              to: _grantFromDonorWithEther.address,
+              value: FUND_AMOUNT
+            })
+          ).to.be.revertedWith("fund::Status Error. Grant not open to funding.");
+        });
+
+>>>>>>> 1a49611ae0d0c23ee81ec06563b012dd49cfcb32:test/Grant-Funding.spec.ts
       });
 
       describe("When sender invalid", () => {
@@ -197,6 +256,25 @@ describe("Grant-Funding", () => {
         it("should revert on funding by grantee", async () => {
           await expect(_granteeWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: 100 })).to.be
             .revertedWith("fund::Permission Error. Grantee cannot fund.");
+<<<<<<< HEAD:test/ManagedCapped/Grant-Funding.spec.ts
+=======
+        });
+
+        it("should send change back to donor if overfunded  (difference of amount and funding required), when amount exceeds funding required", async () => {
+          const initialFunding = await _grantFromManagerWithEther.totalFunding();
+          const initialEtherBalance: any = await _provider.getBalance(_donorWallet.address);
+
+          // Funding by donor
+          const receipt = await (
+            await _donorWallet.sendTransaction({ to: _grantFromDonorWithEther.address, value: 1200, gasPrice: 1 })
+          ).wait();
+
+          const finalEtherBalance = await _provider.getBalance(_donorWallet.address);
+          const gasUsed: any = receipt.gasUsed!;
+          const etherDeducted = gasUsed.add(_TARGET_FUNDING - initialFunding);
+
+          expect(initialEtherBalance.sub(etherDeducted)).to.be.eq(finalEtherBalance);
+>>>>>>> 1a49611ae0d0c23ee81ec06563b012dd49cfcb32:test/Grant-Funding.spec.ts
         });
       });
     });
@@ -205,6 +283,7 @@ describe("Grant-Funding", () => {
       let _donorWallet: Wallet;
       let _grantFromDonorWithToken: Contract;
       let _grantFromManagerWithToken: Contract;
+<<<<<<< HEAD:test/ManagedCapped/Grant-Funding.spec.ts
       let _tokenFromManager: Contract;
       let _provider: any;
       let _TARGET_FUNDING: any;
@@ -219,11 +298,23 @@ describe("Grant-Funding", () => {
           grantFromManagerWithToken,
           provider,
           TARGET_FUNDING
+=======
+      const FUND_AMOUNT = 500;
+      let _fundReceipt: any;
+
+      before(async () => {
+        const { 
+          donorWallet,
+          grantFromDonorWithToken,
+          token,
+          grantFromManagerWithToken
+>>>>>>> 1a49611ae0d0c23ee81ec06563b012dd49cfcb32:test/Grant-Funding.spec.ts
         } = await waffle.loadFixture(fixture);
 
         _donorWallet = donorWallet;
         _grantFromDonorWithToken = grantFromDonorWithToken;
         _grantFromManagerWithToken = grantFromManagerWithToken;
+<<<<<<< HEAD:test/ManagedCapped/Grant-Funding.spec.ts
         _tokenFromManager = tokenFromManager;
         _provider = provider;
         _TARGET_FUNDING = TARGET_FUNDING;
@@ -239,9 +330,21 @@ describe("Grant-Funding", () => {
         
         await expect(_grantFromDonorWithToken.fund(FUND_AMOUNT / 2))
         .to.emit(_grantFromDonorWithToken, 'LogFundingComplete');
+=======
+
+        await token.approve(grantFromManagerWithToken.address, 5000);
+
+        // Donor fund Token
+        _fundReceipt = await (await _grantFromDonorWithToken.fund(FUND_AMOUNT)).wait();
+      });
+
+      it("should be funded by donor", async () => {
+        expect(await _grantFromDonorWithToken.totalFunding()).to.eq(FUND_AMOUNT);
+>>>>>>> 1a49611ae0d0c23ee81ec06563b012dd49cfcb32:test/Grant-Funding.spec.ts
       });
 
 
+<<<<<<< HEAD:test/ManagedCapped/Grant-Funding.spec.ts
       it("should send change back to donor if overfunded  (difference of amount and funding required), when amount exceeds funding required", async () => {
         const initialFunding = await _grantFromManagerWithToken.totalFunding();
         const initialTokenBalance: any = await _tokenFromManager.balanceOf(_donorWallet.address);
@@ -321,6 +424,29 @@ describe("Grant-Funding", () => {
           await expect(_grantFromGranteeWithToken.fund(100)).to.be
             .revertedWith("fund::Permission Error. Grantee cannot fund.");
         });
+=======
+      it("donor's funding balances should equal to fund amount", async () => {
+        const { funded } = await _grantFromDonorWithToken.donors(_donorWallet.address);
+        expect(funded).to.eq(FUND_AMOUNT);
+      });
+
+      it("should grant status to be true", async () => {
+        expect(await _grantFromDonorWithToken.canFund()).to.be.eq(true);
+      });
+
+      it("should reject if donor fund ether for token funded grants", async () => {
+        await expect(
+          _donorWallet.sendTransaction({ to: _grantFromDonorWithToken.address, value: 1e3, gasPrice: 1 })
+        ).to.be.revertedWith("fundWithToken::Currency Error. Cannot send Ether to a token funded grant.");
+      });
+
+      // following test case should be last, because Grant is getting cancelled.
+      it("should reject funding if grant is already cancelled", async () => {
+        await _grantFromManagerWithToken.cancelGrant();
+        await expect(_grantFromDonorWithToken.fund(FUND_AMOUNT)).to.be.revertedWith(
+          "fund::Status Error. Grant not open to funding."
+        );
+>>>>>>> 1a49611ae0d0c23ee81ec06563b012dd49cfcb32:test/Grant-Funding.spec.ts
       });
 
     });
