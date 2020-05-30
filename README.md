@@ -1,5 +1,8 @@
 # OpenGrant Smart Contracts
 
+[![NoahMarconi](https://circleci.com/gh/NoahMarconi/grant-contracts.svg?style=shield)](https://circleci.com/gh/NoahMarconi/grant-contracts)
+
+
 Reference Implementation for OpenGrant proposed EIP.
 
 Write up and announcement here: https://medium.com/@jamesfickel/open-grants-standard-erc-6ed9e137d4fe
@@ -10,7 +13,7 @@ Front end project: https://github.com/NoahMarconi/grants-platform-mono
 
 Project Sponsors: https://github.com/JFickel & https://molochdao.com/
 
-
+## Build Contracts
 # Set up guide
 
 ```
@@ -27,7 +30,6 @@ $ node --version
 $ npm --version
 > 6.14.4
 ```
-
 
 ## Build Contracts
 
