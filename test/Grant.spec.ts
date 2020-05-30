@@ -26,7 +26,7 @@ describe("Grant", () => {
 
     const currentTime = (await provider.getBlock(await provider.getBlockNumber())).timestamp;
     const [granteeWallet, donorWallet, managerWallet] = wallets;
-    const token: Contract = await waffle.deployContract(donorWallet, GrantToken, ["Grant Token", "GT", 18]);
+    const token: Contract = await waffle.deployContract(donorWallet, GrantToken, ["Grant Token", "GT"]);
     const grantWithToken: Contract = await waffle.deployContract(
       granteeWallet,
       Grant,

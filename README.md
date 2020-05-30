@@ -49,7 +49,5 @@ $ npm run test -- test/[FILENAME]
 
 Test docs:
 
-  - https://www.chaijs.com/api/assert/#method_equal
   - https://ethereum-waffle.readthedocs.io/
-  - https://www.chaijs.com/api/bdd/#method_ok
 

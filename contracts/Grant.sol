@@ -211,6 +211,16 @@ contract Grant is AbstractGrant, ReentrancyGuard {
             "fund::Status Error. Grant not open to funding."
         );
 
+        require(
+            !isManager(msg.sender),
+            "fund::Permission Error. Grant Manager cannot fund."
+        );
+
+        require(
+            grantees[msg.sender].targetFunding == 0,
+            "fund::Permission Error. Grantee cannot fund."
+        );
+
         uint256 newTotalFunding = totalFunding.add(value);
 
         uint256 change = 0;

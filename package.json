@@ -1,10 +1,10 @@
 {
   "name": "grant-contracts",
   "version": "1.0.0",
-  "description": "Ethereum Smart Contracts to encode grants",
+  "description": "Reference Implementation for OpenGrant EIP",
   "main": "index.js",
   "scripts": {
-    "test": "npx waffle && npx ts-mocha test/*",
+    "test": "run(){ npx waffle && npx ts-mocha ${1-'test/*'}; }; run",
     "clean": "npx rimraf ./node_modules/",
     "lint": "npx solium -d contracts/"
   },
@@ -35,8 +35,8 @@
     "@types/mocha": "^5.2.7",
     "chai": "^4.2.0",
     "ethereum-waffle": "^2.5.1",
+    "ethlint": "^1.2.5",
     "rimraf": "^3.0.0",
-    "solium": "^1.2.5",
     "ts-mocha": "^6.0.0",
     "typescript": "^3.5.3"
   }
