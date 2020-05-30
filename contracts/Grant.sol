@@ -1,4 +1,5 @@
-pragma solidity >=0.5.10 <0.6.0;
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.6.8 <0.7.0;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
@@ -12,7 +13,7 @@ import "./ISignal.sol";
  * @dev Grant request, funding, and management.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
+contract Grant is AbstractGrant, ReentrancyGuard {
     using SafeMath for uint256;
 
 
@@ -147,6 +148,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
      */
     function availableBalance()
         public
+        override
         view
         returns(uint256)
     {
@@ -163,6 +165,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
      */
     function canFund()
         public
+        override
         view
         returns(bool)
     {
@@ -198,6 +201,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
      */
     function fund(uint256 value)
         public
+        override
         nonReentrant // OpenZeppelin mutex due to sending change if over-funded.
         returns (bool)
     {
@@ -255,6 +259,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
      */
     function approvePayout(uint256 value, address grantee)
         public
+        override
         onlyManager
         returns(bool)
     {
@@ -288,6 +293,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
      */
     function cancelGrant()
         public
+        override
     {
         require(
             !grantCancelled,
@@ -322,6 +328,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
      */
     function approveRefund(uint256 value, address grantee)
         public
+        override
         onlyManager
     {
 
@@ -356,6 +363,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
      */
     function withdrawRefund(address payable donor)
         public
+        override
         nonReentrant // OpenZeppelin mutex due to sending funds.
         returns(bool)
     {
@@ -409,6 +417,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
      */
     function withdrawPayout(address payable grantee)
         public
+        override
         nonReentrant // OpenZeppelin mutex due to sending funds.
         returns(bool)
     {
@@ -511,7 +520,7 @@ contract Grant is AbstractGrant, ISignal, ReentrancyGuard {
 
     /*----------  Fallback  ----------*/
 
-    function ()
+    receive()
         external
         payable
     {
