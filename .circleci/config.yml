@@ -14,11 +14,9 @@ jobs:
     steps:
       - checkout
       - setup_solc
-      - node/with-cache:
-          steps:
-            - run: cp circle_waffle.js waffle.js
-            - run: npm install
-            - run: npm test
+      - run: cp circle_waffle.js waffle.js
+      - run: npm install
+      - run: npm test
 
 workflows:
     build-and-test:
