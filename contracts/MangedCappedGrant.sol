@@ -353,7 +353,7 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
             );
 
             // Reduce allocation.
-            grantees[grantee].targetFunding.sub(value);
+            grantees[grantee].targetFunding = grantees[grantee].targetFunding.sub(value);
         }
 
         require(
