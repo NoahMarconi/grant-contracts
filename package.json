@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "run(){ npx waffle && npx ts-mocha --timeout 10000 ${1-'test/*/*.spec.ts'}; }; run",
+    "build": "npx waffle",
     "clean": "npx rimraf ./node_modules/",
     "lint": "npx solhint contracts/*.sol"
   },
