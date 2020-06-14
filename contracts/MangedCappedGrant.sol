@@ -19,7 +19,7 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
 
     /*----------  Constants  ----------*/
 
-    uint256 private ATOMIC_UNITS = 10 ** 18; // solhint-disable-line var-name-mixedcase
+    uint256 private constant ATOMIC_UNITS = 10 ** 18;
 
 
     /*----------  Global Variables  ----------*/
