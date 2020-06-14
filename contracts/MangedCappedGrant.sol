@@ -19,14 +19,14 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
 
     /*----------  Constants  ----------*/
 
-    uint256 ATOMIC_UNITS = 10 ** 18;
+    uint256 private ATOMIC_UNITS = 10 ** 18; // solhint-disable-line var-name-mixedcase
 
 
     /*----------  Global Variables  ----------*/
 
-    uint256 totalGranteeAllocation; // Check _targetFunding against sum of _amounts array.
-                                    // OR used to calculate proportions of targetFunding is 0.
-    address[] granteeReference;     // Reference to grantee addresses to allow for allocation top up.
+    uint256 private totalGranteeAllocation; // Check _targetFunding against sum of _amounts array.
+                                            // OR used to calculate proportions of targetFunding is 0.
+    address[] private granteeReference;     // Reference to grantee addresses to allow for allocation top up.
     /*----------  Constructor  ----------*/
 
     /**
@@ -57,13 +57,13 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
         );
 
         require(
-        // solium-disable-next-line security/no-block-members
+        // solhint-disable-next-line not-rely-on-time
             _fundingDeadline == 0 || _fundingDeadline > now,
             "constructor::Invalid Argument. _fundingDeadline not > now."
         );
 
         require(
-        // solium-disable-next-line security/no-block-members
+        // solhint-disable-next-line not-rely-on-time
             _contractExpiration == 0 || _contractExpiration > now,
             "constructor::Invalid Argument. _contractExpiration not > now."
         );
@@ -170,7 +170,7 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
         returns(bool)
     {
         return (
-            // solium-disable-next-line security/no-block-members
+            // solhint-disable-next-line not-rely-on-time
             (fundingDeadline == 0 || fundingDeadline > now) &&
             (targetFunding == 0 || totalFunding < targetFunding) &&
             !grantCancelled
@@ -319,10 +319,10 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
             //      1. Funding goal not met before fundingDeadline.
             //      2. Funds not completely dispersed before contractExpiration.
             require(
-                // solium-disable-next-line security/no-block-members
+                /* solhint-disable not-rely-on-time */
                 (fundingDeadline != 0 && fundingDeadline <= now && totalFunding < targetFunding) ||
                 (contractExpiration != 0 && contractExpiration <= now),
-                // solium-disable-previous-line security/no-block-members
+                /* solhint-enable not-rely-on-time */
                 "cancelGrant::Invalid Sender. Sender must be manager or expired."
             );
         }
@@ -411,13 +411,12 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
         // Send funds.
         if (currency == address(0)) {
             require(
-                // solium-disable-next-line security/no-send
-                donor.send(eligibleRefund),
+                donor.send(eligibleRefund), // solhint-disable-line check-send-result
                 "withdrawRefund::Transfer Error. Unable to send refundValue to Donor."
             );
         } else {
             require(
-                IERC20(currency)
+                IERC20(currency) // solhint-disable-line mark-callable-contracts
                     .transfer(donor, eligibleRefund),
                 "withdrawRefund::Transfer Error. ERC20 token transfer failed."
             );
@@ -454,13 +453,13 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
         // Send funds.
         if (currency == address(0)) {
             require(
-                // solium-disable-next-line security/no-send
+                // solhint-disable-next-line check-send-result
                 grantee.send(eligiblePayout),
                 "withdrawPayout::Transfer Error. Unable to send value to Grantee."
             );
         } else {
             require(
-                IERC20(currency)
+                IERC20(currency) // solhint-disable-line mark-callable-contracts
                     .transfer(grantee, eligiblePayout),
                 "withdrawPayout::Transfer Error. ERC20 token transfer failed."
             );
@@ -488,7 +487,7 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
         // Send change as refund.
         if (change > 0) {
             require(
-                // solium-disable-next-line security/no-send
+                // solhint-disable-next-line check-send-result
                 msg.sender.send(change),
                 "fundWithEther::Transfer Error. Unable to send change back to sender."
             );
@@ -511,7 +510,7 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
         // Subtract change before transferring to grant contract.
         uint256 netValue = value.sub(change);
         require(
-            IERC20(currency)
+            IERC20(currency) // solhint-disable-line mark-callable-contracts
                 .transferFrom(msg.sender, address(this), netValue),
             "fund::Transfer Error. ERC20 token transferFrom failed."
         );
