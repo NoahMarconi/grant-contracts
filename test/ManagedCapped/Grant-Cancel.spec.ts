@@ -110,6 +110,9 @@ describe("Grant", () => {
         await tokenFromDonor.approve(grantFromDonorWithToken.address, 1000);
       });
 
+      it("should permit anyone to cancel if past funding deadline");
+      it("should permit anyone to cancel if past contract expiration");
+
       it("should fail if not GrantManager", async () => {
         await expect(_grantFromDonorWithToken.cancelGrant()).to.be.revertedWith(
           "cancelGrant::Invalid Sender. Sender must be manager or expired."
