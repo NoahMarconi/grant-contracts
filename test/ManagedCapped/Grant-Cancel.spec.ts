@@ -14,7 +14,7 @@ const fixture = helpers.fixtures.fixture;
 chai.use(waffle.solidity);
 const { expect, assert } = chai;
 
-describe("Grant", () => {
+describe("Grant-Cancel", () => {
 
   describe("Cancelling Grant", () => {
     describe("With Ether", () => {
