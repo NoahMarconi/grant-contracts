@@ -7,6 +7,9 @@ import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "./AbstractGrant.sol";
 import "./ISignal.sol";
 
+interface TrustedToken is IERC20 {
+    function decimals() external view returns (uint8);
+}
 
 /**
  * @title Grants Spec Contract.
@@ -50,6 +53,11 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
     )
         public
     {
+
+        require(
+            _currency == address(0) || TrustedToken(_currency).decimals() == 18,
+            "constructor::Invalid Argument. Token must have 18 decimal places."
+        );
 
         require(
             _fundingDeadline == 0 || _fundingDeadline < _contractExpiration,
@@ -416,7 +424,7 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
             );
         } else {
             require(
-                IERC20(currency) // solhint-disable-line mark-callable-contracts
+                TrustedToken(currency)
                     .transfer(donor, eligibleRefund),
                 "withdrawRefund::Transfer Error. ERC20 token transfer failed."
             );
@@ -459,7 +467,7 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
             );
         } else {
             require(
-                IERC20(currency) // solhint-disable-line mark-callable-contracts
+                TrustedToken(currency)
                     .transfer(grantee, eligiblePayout),
                 "withdrawPayout::Transfer Error. ERC20 token transfer failed."
             );
@@ -510,7 +518,7 @@ contract MangedCappedGrant is AbstractGrant, ReentrancyGuard {
         // Subtract change before transferring to grant contract.
         uint256 netValue = value.sub(change);
         require(
-            IERC20(currency) // solhint-disable-line mark-callable-contracts
+            TrustedToken(currency)
                 .transferFrom(msg.sender, address(this), netValue),
             "fund::Transfer Error. ERC20 token transferFrom failed."
         );
