@@ -8,7 +8,7 @@ module.exports = {
   //   shell.rm('-rf', './typechain'); // Clean up at the end
   // }
   providerOptions: {
-    gasLimit: 0xfffffffffff,
-    testrpcOptions: '-p 8555 -l 0xfffffffffff'
+    // gasLimit: 0xfffffffffff,
+    // testrpcOptions: '-p 8555 -l 0xfffffffffff'
   }
 }

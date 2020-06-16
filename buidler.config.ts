@@ -14,9 +14,9 @@ const config: BuidlerConfig = {
     networks: {
         coverage: {
           url: 'http://127.0.0.1:8555', // Coverage launches its own ganache-cli client
-          blockGasLimit: 0xfffffffffff,
-          gas: 0xfffffffffff,
-          gasPrice: 0x01
+          // blockGasLimit: 0xfffffffffff,
+          // gas: 0xfffffffffff,
+          // gasPrice: 0x01
         }
       }
 };

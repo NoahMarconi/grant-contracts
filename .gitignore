@@ -5,3 +5,5 @@ build/*
 .coverage*
 coverage/
 coverage.json
+.DS_Store
+cache/
