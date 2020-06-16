@@ -8,7 +8,6 @@ import { BigNumber } from "ethers/utils/bignumber";
 import { Web3Provider, Provider } from "ethers/providers";
 import { bigNumberify, randomBytes, solidityKeccak256, id } from "ethers/utils";
 import { AddressZero } from "ethers/constants";
-import { before } from "mocha";
 import { helpers } from "../helpers/helpers";
 
 const fixture = helpers.fixtures.fixture;

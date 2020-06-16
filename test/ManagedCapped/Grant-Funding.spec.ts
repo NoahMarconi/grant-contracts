@@ -6,7 +6,6 @@ import * as waffle from "ethereum-waffle";
 import { Contract, Wallet } from "ethers";
 import { BigNumber } from "ethers/utils/bignumber";
 import { AddressZero, Zero } from "ethers/constants";
-import { before } from "mocha";
 import { helpers } from "../helpers/helpers";
 
 const fixture = helpers.fixtures.fixture;

@@ -15,6 +15,9 @@ async function fixture(provider: any, wallets: Wallet[]) {
 
   const token: Contract = await waffle.deployContract(donorWallet, GrantToken, ["Grant Token", "GT"]);
 
+  await provider.send('evm_mine')
+  console.log(await provider.getBlock('latest'));
+
   const grantFromGranteeWithToken: Contract = await waffle.deployContract(
     granteeWallet,
     Grant,
@@ -27,8 +30,10 @@ async function fixture(provider: any, wallets: Wallet[]) {
       currentTime + 86400,     // Funding deadline
       currentTime + 86400 * 2  // Contract Expiration
     ],
-    { gasLimit: 6e6 }
+    // { gasLimit: 6e7 }
   );
+
+  await provider.send('evm_mine')
 
   const grantFromGranteeWithEther: Contract = await waffle.deployContract(
     granteeWallet,
@@ -42,12 +47,16 @@ async function fixture(provider: any, wallets: Wallet[]) {
       currentTime + 86400,     // Funding deadline
       currentTime + 86400 * 2  // Contract Expiration
     ],
-    { gasLimit: 6e6 }
+    { gasLimit: 6e7 }
   );
 
+  await provider.send('evm_mine')
+
   const grantFactory: Contract = await waffle.deployContract(donorWallet, GrantFactory, undefined, {
-    gasLimit: 6e6
+    gasLimit: 6e7
   });
+
+  await provider.send('evm_mine')
 
   // Initial token balance.
   await token.mint(donorWallet.address, 1e6);
