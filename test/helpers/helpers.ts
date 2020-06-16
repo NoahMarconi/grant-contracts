@@ -30,7 +30,7 @@ async function fixture(provider: any, wallets: Wallet[]) {
       currentTime + 86400,     // Funding deadline
       currentTime + 86400 * 2  // Contract Expiration
     ],
-    // { gasLimit: 6e7 }
+    { gasLimit: 6e7 }
   );
 
   await provider.send('evm_mine')

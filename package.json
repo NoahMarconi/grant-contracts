@@ -7,7 +7,8 @@
     "test": "run(){ npx waffle && npx ts-mocha --timeout 10000 ${1-'test/*/*.spec.ts'}; }; run",
     "build": "npx waffle",
     "clean": "npx rimraf ./node_modules/",
-    "lint": "npx solhint contracts/*.sol"
+    "lint": "npx solhint contracts/*.sol",
+    "coverage": "npx buidler coverage --temp build --network coverage --solcoverjs .solcover.js"
   },
   "repository": {
     "type": "git",
