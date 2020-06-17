@@ -8,8 +8,8 @@ import { BigNumber } from "ethers/utils/bignumber";
 import { AddressZero, Zero } from "ethers/constants";
 import { helpers } from "../helpers/helpers";
 import bre from '@nomiclabs/buidler';
-const fixture = helpers.fixtures.fixture;
 
+const fixture = helpers.fixtures.fixture;
 
 chai.use(waffle.solidity);
 const { expect, assert } = chai;
