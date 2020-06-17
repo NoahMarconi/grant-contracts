@@ -8,11 +8,13 @@ import { BuidlerRuntimeEnvironment } from '@nomiclabs/buidler/types';
 const AMOUNTS = [1000];
 const TARGET_FUNDING = AMOUNTS.reduce((a, b) => a + b, 0);
 
+const AMOUNTS_1 = [1000, 500];
+const TARGET_FUNDING_1 = AMOUNTS_1.reduce((a, b) => a + b, 0);
+
 async function fixture(bre: BuidlerRuntimeEnvironment) {
   const provider = bre.waffle.provider;
   const ethers = bre.ethers;
   const { AddressZero, Zero } = ethers.constants;
-  console.log(bre.config.paths.artifacts);
   let wallets = await bre.ethers.signers();
   wallets = wallets.sort((x, y) => x.getAddress() < y.getAddress() ? 1 : -1);
   const [granteeWallet, donorWallet, managerWallet, secondDonorWallet, unknownWallet] = wallets;
@@ -92,13 +94,106 @@ async function fixture(bre: BuidlerRuntimeEnvironment) {
   };
 }
 
+async function fixtureWithMultipleGrantee(bre: BuidlerRuntimeEnvironment) {
+    const provider = bre.waffle.provider;
+    const ethers = bre.ethers;
+    const { AddressZero, Zero } = ethers.constants;
+    let wallets = await bre.ethers.signers();
+    wallets = wallets.sort((x, y) => x.getAddress() < y.getAddress() ? 1 : -1);
+
+    const [
+      granteeWallet,
+      secondGranteeWallet,
+      donorWallet,
+      secondDonorWallet,
+      managerWallet,
+      thirdPersonWallet
+    ] = wallets;
+
+    // Factories
+    const ManagedCappedGrant = await ethers.getContractFactory("ManagedCappedGrant");
+    const GrantToken = await ethers.getContractFactory("GrantToken");
+    const GrantFactory = await ethers.getContractFactory("GrantFactory");
+    
+    const currentTime = (await provider.getBlock(await provider.getBlockNumber())).timestamp;
+    
+    // Deploy
+    const token = await GrantToken.deploy(...["Grant Token", "GT"]);
+    const managedCappedGrantWithToken = await ManagedCappedGrant.deploy(
+        [await granteeWallet.getAddress(), await secondGranteeWallet.getAddress()], // Grantees 
+        AMOUNTS_1,                 // Allocations
+        await managerWallet.getAddress(),   // Manager address
+        token.address,           // Currency
+        TARGET_FUNDING_1,          // Target Funding
+        currentTime + 86400,     // Funding deadline
+        currentTime + 86400 * 2  // Contract Expiration
+    );
+
+    const managedCappedGrantWithEther = await ManagedCappedGrant.deploy(
+        [await granteeWallet.getAddress(), await secondGranteeWallet.getAddress()], // Grantees 
+        AMOUNTS_1,                      // Allocations
+        await managerWallet.getAddress(),   // Manager address
+        AddressZero,                  // Currency
+        TARGET_FUNDING_1,               // Target Funding
+        currentTime + 86400,          // Funding deadline
+        currentTime + 86400 * 2       // Contract Expiration
+    );
+
+
+    await token.deployed();
+    await managedCappedGrantWithEther.deployed();
+    await managedCappedGrantWithToken.deployed();
+
+    // Initial token balance.
+    await token.mint(await donorWallet.getAddress(), 1e6);
+    await token.mint(await secondDonorWallet.getAddress(), 1e6);
+
+
+    const tokenFromManager = token.connect(managerWallet);
+    const tokenFromGrantee = token.connect(granteeWallet);
+    const tokenFromDonor = token.connect(donorWallet);
+    const tokenFromSecondDonor = token.connect(secondDonorWallet);
+  
+    const grantFromDonorWithToken = managedCappedGrantWithToken.connect(donorWallet);
+    const grantFromSecondDonorWithToken = managedCappedGrantWithToken.connect(secondDonorWallet);
+    const grantFromDonorWithEther = managedCappedGrantWithEther.connect(donorWallet);
+    const grantFromSecondDonorWithEther = managedCappedGrantWithEther.connect(secondDonorWallet);
+    const grantFromManagerWithToken = managedCappedGrantWithToken.connect(managerWallet);
+    const grantFromManagerWithEther = managedCappedGrantWithEther.connect(managerWallet);
+    const grantFromGranteeWithToken = managedCappedGrantWithToken.connect(granteeWallet);
+    const grantFromGranteeWithEther = managedCappedGrantWithEther.connect(granteeWallet);
+
+    return {
+      grantFromGranteeWithToken,
+      grantFromDonorWithToken,
+      grantFromSecondDonorWithToken,
+      grantFromManagerWithToken,
+      tokenFromDonor,
+      tokenFromSecondDonor,
+      granteeWallet,
+      secondGranteeWallet,
+      donorWallet,
+      secondDonorWallet,
+      managerWallet,
+      thirdPersonWallet,
+      grantFromDonorWithEther,
+      grantFromSecondDonorWithEther,
+      grantFromManagerWithEther,
+      provider,
+      TARGET_FUNDING
+    };
+  }
+
 
 export const helpers = {
     constants: {
         AMOUNTS,
-        TARGET_FUNDING
+        TARGET_FUNDING,
+        AMOUNTS_1,
+        TARGET_FUNDING_1
     },
     fixtures: {
-        fixture
+        fixture,
+        fixtureWithMultipleGrantee
     }
 }
