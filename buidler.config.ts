@@ -1,6 +1,7 @@
 import { task, usePlugin, BuidlerConfig } from "@nomiclabs/buidler/config";
 
 usePlugin("@nomiclabs/buidler-waffle");
+usePlugin("@nomiclabs/buidler-ganache");
 usePlugin("solidity-coverage");
 
 const config: BuidlerConfig = {

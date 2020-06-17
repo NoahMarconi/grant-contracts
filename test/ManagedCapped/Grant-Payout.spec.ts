@@ -222,8 +222,6 @@ describe("Grant-Payout", () => {
   });
 
   describe("When there are multiple payments to multiple grantees", () => {
-    const AMOUNTS = [1000, 500];
-    const TARGET_FUNDING = AMOUNTS.reduce((a, b) => a + b, 0);
 
     describe("With Token", () => {
       describe("Grantees' balance", () => {
@@ -391,14 +389,13 @@ describe("Grant-Payout", () => {
         });
 
         it("should revert when approval surpasses remaining allocation", async () => {
-          const approveAmount = 250;
-
-          await expect(_grantFromManager.approvePayout(approveAmount, await _granteeWallet.getAddress()))
+          
+          await expect(_grantFromManager.approvePayout(AMOUNTS_1[0] + 1, await _granteeWallet.getAddress()))
             .to.be.revertedWith(
               "approvePayout::Invalid Argument. value cannot exceed remaining allocation."
             );
 
-          await expect(_grantFromManager.approvePayout(approveAmount, await _secondGranteeWallet.getAddress()))
+          await expect(_grantFromManager.approvePayout(AMOUNTS_1[1] + 1, await _secondGranteeWallet.getAddress()))
             .to.be.revertedWith(
               "approvePayout::Invalid Argument. value cannot exceed remaining allocation."
             );
