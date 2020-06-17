@@ -13,7 +13,8 @@ async function fixture(bre: BuidlerRuntimeEnvironment) {
   const ethers = bre.ethers;
   const { AddressZero, Zero } = ethers.constants;
   console.log(bre.config.paths.artifacts);
-  const wallets = await bre.ethers.signers();
+  let wallets = await bre.ethers.signers();
+  wallets = wallets.sort((x, y) => x.getAddress() < y.getAddress() ? 1 : -1);
   const [granteeWallet, donorWallet, managerWallet, secondDonorWallet, unknownWallet] = wallets;
 
   // Factories
