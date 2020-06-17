@@ -1,8 +1,3 @@
-// import Grant from "../../build/MangedCappedGrant.json";
-// import GrantToken from "../../build/GrantToken.json";
-// import GrantFactory from "../../build/GrantFactory.json";
-// import { Contract, Wallet } from "ethers";
-// import { AddressZero, Zero } from "ethers/constants";
 import { BuidlerRuntimeEnvironment } from '@nomiclabs/buidler/types';
 
 const AMOUNTS = [1000];
