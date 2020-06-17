@@ -18,6 +18,8 @@ jobs:
       - run: npm install
       - run: npm run lint
       - run: npm test
+      - run: npm run coverage
+      - run: bash <(curl -s https://codecov.io/bash)
 
 workflows:
     build-and-test:

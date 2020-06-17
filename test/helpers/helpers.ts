@@ -8,7 +8,7 @@ import { BuidlerRuntimeEnvironment } from '@nomiclabs/buidler/types';
 const AMOUNTS = [1000];
 const TARGET_FUNDING = AMOUNTS.reduce((a, b) => a + b, 0);
 
-const AMOUNTS_1 = [1000, 500];
+const AMOUNTS_1 = [1400, 1000];
 const TARGET_FUNDING_1 = AMOUNTS_1.reduce((a, b) => a + b, 0);
 
 async function fixture(bre: BuidlerRuntimeEnvironment) {
@@ -16,8 +16,17 @@ async function fixture(bre: BuidlerRuntimeEnvironment) {
   const ethers = bre.ethers;
   const { AddressZero, Zero } = ethers.constants;
   let wallets = await bre.ethers.signers();
-  wallets = wallets.sort((x, y) => x.getAddress() < y.getAddress() ? 1 : -1);
+  let addresses = await wallets.map(async (x, i) => {
+    return {
+      signer: x,
+      i,
+      address: await x.getAddress()
+    }
+  });
+  let sortedAddresses = (await Promise.all(addresses)).sort((x, y) => x.address > y.address ? 1 : -1)
+  wallets = sortedAddresses.map(x => x.signer);
   const [granteeWallet, donorWallet, managerWallet, secondDonorWallet, unknownWallet] = wallets;
+
 
   // Factories
   const ManagedCappedGrant = await ethers.getContractFactory("ManagedCappedGrant");
@@ -99,8 +108,16 @@ async function fixtureWithMultipleGrantee(bre: BuidlerRuntimeEnvironment) {
     const ethers = bre.ethers;
     const { AddressZero, Zero } = ethers.constants;
     let wallets = await bre.ethers.signers();
-    wallets = wallets.sort((x, y) => x.getAddress() < y.getAddress() ? 1 : -1);
-
+    // resolve promises then sort
+    let addresses = await wallets.map(async (x, i) => {
+      return {
+        signer: x,
+        i,
+        address: await x.getAddress()
+      }
+    });
+    let sortedAddresses = (await Promise.all(addresses)).sort((x, y) => x.address > y.address ? 1 : -1)
+    wallets = sortedAddresses.map(x => x.signer);
     const [
       granteeWallet,
       secondGranteeWallet,
@@ -109,6 +126,7 @@ async function fixtureWithMultipleGrantee(bre: BuidlerRuntimeEnvironment) {
       managerWallet,
       thirdPersonWallet
     ] = wallets;
+
 
     // Factories
     const ManagedCappedGrant = await ethers.getContractFactory("ManagedCappedGrant");
@@ -182,7 +200,7 @@ async function fixtureWithMultipleGrantee(bre: BuidlerRuntimeEnvironment) {
       provider,
       TARGET_FUNDING
     };
-  }
+}
 
 
 export const helpers = {
