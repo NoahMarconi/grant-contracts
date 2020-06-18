@@ -1,3 +1,4 @@
+import Grant from "../../build/ManagedCappedGrant.json";
 import chai from "chai";
 import * as waffle from "ethereum-waffle";
 import { Contract, Wallet, constants, Signer } from "ethers";
