@@ -31,7 +31,7 @@
   "homepage": "https://github.com/NoahMarconi/grant-contracts#readme",
   "dependencies": {
     "diff": ">=3.5.0",
-    "openzeppelin-solidity": "^3.0.1"
+    "openzeppelin-solidity": "^3.0.2"
   },
   "devDependencies": {
     "@nomiclabs/buidler": "^1.3.6",

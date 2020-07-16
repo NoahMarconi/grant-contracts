@@ -73,6 +73,13 @@ abstract contract AbstractGrant {
     event LogPayment(address indexed grantee, uint256 value);
 
     /**
+     * @dev Manager reducing allocation.
+     * @param grantee Address with reduced allocation.
+     * @param value Amount in WEI or ATOMIC_UNITS approved for payment.
+     */
+    event LogAllocationReduction(address indexed grantee, uint256 value);
+
+    /**
      * @dev Manager approving a payment.
      * @param grantee Address receiving payment.
      * @param value Amount in WEI or ATOMIC_UNITS approved for payment.
@@ -134,9 +141,17 @@ abstract contract AbstractGrant {
      * @dev Approve refunding a portion of the contract's available balance.
      *      Refunds are split between donors based on their contribution to totalFunded.
      * @param value Amount to refund.
+     */
+    function approveRefund(uint256 value)
+        public
+        virtual;
+
+    /**
+     * @dev Reduce a grantee's allocation by a specified value.
+     * @param value Amount to refund.
      * @param grantee Grantee address to reduce allocation from.
      */
-    function approveRefund(uint256 value, address grantee)
+    function reduceAllocation(uint256 value, address grantee)
         public
         virtual;
 
