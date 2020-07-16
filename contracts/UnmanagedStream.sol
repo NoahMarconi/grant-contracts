@@ -14,10 +14,10 @@ interface TrustedToken is IERC20 {
 
 /**
  * @title Grant for d24n.
- * @dev Managed                     (y)
+ * @dev Managed                     (n)
  *      Funding Deadline            (n)
  *      Contract expiry             (y)
- *      With Token                  (y)
+ *      With Token                  (n)
  *      Percentage based allocation (y)
  * @author @NoahMarconi
  */
@@ -67,8 +67,8 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
         );
 
         require(
-            _currency != address(0) && TrustedToken(_currency).decimals() == 18,
-            "constructor::Invalid Argument. Token must have 18 decimal places."
+            _currency == address(0),
+            "constructor::Invalid Argument. Currency must be ADDRESS_ZERO."
         );
 
         require(
@@ -94,7 +94,6 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
 
         // Initialize globals.
         uri = _uri;
-        manager = _manager;
         currency = _currency;
         contractExpiration = _contractExpiration;
 
@@ -177,6 +176,19 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
         returns(bool)
     {
         return !grantCancelled;
+    }
+
+    /**
+     * @dev Grantee specific check for remaining allocated funds.
+     * @param grantee's address.
+     */
+    function remainingAllocation(address grantee)
+        public
+        view
+        returns(uint256)
+    {
+        return grantees[grantee].targetFunding
+            .sub(grantees[grantee].payoutApproved);
     }
 
 
