@@ -103,8 +103,8 @@ contract UnmanagedStream is ReentrancyGuard {
 
         require(
         // solhint-disable-next-line not-rely-on-time
-            _contractExpiration != 0 && _contractExpiration > now,
-            "constructor::Invalid Argument. _contractExpiration not > now."
+            _contractExpiration == 0 ,
+            "constructor::Invalid Argument. _contractExpiration must be 0."
         );
 
         require(
