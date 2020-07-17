@@ -28,7 +28,6 @@ contract UnmanagedStream is ReentrancyGuard {
     address[] private granteeReference;          // Reference to grantee addresses to allow for allocation top up.
     uint256 private cumulativeTargetFunding;     // Denominator for calculating grantee's percentage.
     bytes public uri;                            // URI for additional (off-chain) grant details such as description, milestones, etc.
-    uint256 public totalFunding;                 // Cumulative funding donated by donors.
     uint256 public contractExpiration;           // (Optional) Date after which payouts must be complete or anyone can trigger refunds.
     bool public grantCancelled;                  // Flag to indicate when grant is cancelled.
     mapping(address => Grantee) public grantees; // Grant recipients by address.
