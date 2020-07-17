@@ -158,6 +158,7 @@ contract UnmanagedStream is ReentrancyGuard {
     receive()
         external
         payable
+        nonReentrant
     {
 
         require(
