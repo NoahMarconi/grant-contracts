@@ -154,8 +154,9 @@ contract UnmanagedStream is ReentrancyGuard {
                 msg.value
             );
 
+            (bool success, ) = currentGrantee.call{ value: eligiblePortion}("");
             require(
-                currentGrantee.send(eligiblePortion), // solhint-disable-line check-send-result
+                success,
                 "fallback::Transfer Error. Unable to send eligiblePortion to Grantee."
             );
 
