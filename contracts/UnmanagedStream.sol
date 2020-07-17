@@ -225,7 +225,7 @@ contract UnmanagedStream is ReentrancyGuard {
         require(
             // solhint-disable-next-line not-rely-on-time
             (contractExpiration != 0 && contractExpiration <= now),
-            "cancelGrant::Invalid Sender.Contract must be expired."
+            "cancelGrant::Invalid Date.Contract must be expired."
         );
 
         grantCancelled = true;
@@ -245,13 +245,8 @@ contract UnmanagedStream is ReentrancyGuard {
     {
 
         require(
-            msg.value == 0,
-            "fundWithToken::Currency Error. Cannot send Ether to a token funded grant."
-        );
-
-        require(
             value > 0,
-            "fundWithToken::::Invalid Value. value must be greater than 0."
+            "pushPayment::::Invalid Value. value must be greater than 0."
         );
 
         for (uint256 i = 0; i < granteeReference.length; i++) {
