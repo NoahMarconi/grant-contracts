@@ -153,10 +153,6 @@ contract UnmanagedStream is ReentrancyGuard {
     }
 
 
-    /*----------  Public Methods  ----------*/
-
-
-
     /*----------  Fallback  ----------*/
 
     receive()
@@ -172,7 +168,7 @@ contract UnmanagedStream is ReentrancyGuard {
         // Defer to correct funding method.
         require(
             msg.value > 0,
-            "fallback::::Invalid Value. msg.value must be greater than 0."
+            "fallback::Invalid Value. msg.value must be greater than 0."
         );
 
         for (uint256 i = 0; i < granteeReference.length; i++) {
