@@ -41,39 +41,32 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
      * @dev Grant creation function. May be called by grantors, grantees, or any other relevant party.
      * @param _grantees Sorted recipients of unlocked funds.
      * @param _amounts Respective allocations for each Grantee (must follow sort order of _grantees).
-     * @param _manager (Optional) Multisig or EOA address of grant manager.
      * @param _currency (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
-     * @param _targetFunding Must be 0 for Uncapped Grant.
-     * @param _fundingDeadline (Optional) Date after which signaling OR funds cannot be sent.
-     * @param _contractExpiration (Optional) Date after which payouts must be complete or anyone can trigger refunds.
      * @param _uri URI for additional (off-chain) grant details such as description, milestones, etc.
+     * @param _extraData (Optional) Support for extensions to the Standard.
      */
     constructor(
         address[] memory _grantees,
         uint256[] memory _amounts,
-        address _manager,
         address _currency,
-        uint256 _targetFunding,
-        uint256 _fundingDeadline,
-        uint256 _contractExpiration,
-        bytes memory _uri
+        bytes memory _uri,
+        bytes memory _extraData
     )
         public
     {
 
-        require(
-            (_targetFunding == 0),
-            "constructor::Invalid Argument. _targetFunding must be 0 for Uncapped Grant."
-        );
+        address _manager;               //  _manager Multisig or EOA address of grant manager.
+        uint256 _contractExpiration;    //  _contractExpiration (Optional) Date after which payouts must be complete or anyone can trigger refunds.
+        bool _percentageOrFixed;        //  _percentageOrFixed (Optional) Grantee targets are percentage based or fixed.
+        (
+            _manager,
+            _contractExpiration,
+            _percentageOrFixed
+        ) = abi.decode(_extraData, (address, uint256, bool));
 
         require(
             _currency != address(0) && TrustedToken(_currency).decimals() == 18,
             "constructor::Invalid Argument. Token must have 18 decimal places."
-        );
-
-        require(
-            _fundingDeadline == 0,
-            "constructor::Invalid Argument. _fundingDeadline must be 0."
         );
 
         require(

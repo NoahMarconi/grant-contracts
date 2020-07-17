@@ -5,7 +5,7 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "./AbstractGrant.sol";
-import "./ISignal.sol";
+import "./Percentages.sol";
 
 interface TrustedToken is IERC20 {
     function decimals() external view returns (uint8);
@@ -14,6 +14,12 @@ interface TrustedToken is IERC20 {
 /**
  * @title Grants Spec Contract.
  * @dev Grant request, funding, and management.
+ *      Managed                     (y)
+ *      Funding Deadline            (y/n)
+ *      Contract expiry             (y/n)
+ *      With Token                  (y/n)
+ *      Percentage based allocation (y)
+ *      Withdraw (pull payment)     (y)
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
 contract ManagedCappedGrant is AbstractGrant, ReentrancyGuard {
@@ -27,34 +33,50 @@ contract ManagedCappedGrant is AbstractGrant, ReentrancyGuard {
 
     /*----------  Global Variables  ----------*/
 
-    uint256 private totalGranteeAllocation; // Check _targetFunding against sum of _amounts array.
-                                            // OR used to calculate proportions of targetFunding is 0.
-    address[] private granteeReference;     // Reference to grantee addresses to allow for allocation top up.
+    uint256 private totalGranteeAllocation;  // Check _targetFunding against sum of _amounts array.
+                                             // OR used to calculate proportions of targetFunding is 0.
+    address[] private granteeReference;      // Reference to grantee addresses to allow for allocation top up.
+    uint256 private cumulativeTargetFunding; // Denominator for calculating grantee's percentage.
+    bool fundingActive = true;               // When false new funding is rejected.
+    bool percentageOrFixed = false;
+
     /*----------  Constructor  ----------*/
 
     /**
      * @dev Grant creation function. May be called by grantors, grantees, or any other relevant party.
      * @param _grantees Sorted recipients of unlocked funds.
      * @param _amounts Respective allocations for each Grantee (must follow sort order of _grantees).
-     * @param _manager (Optional) Multisig or EOA address of grant manager.
      * @param _currency (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
-     * @param _targetFunding (Optional) Funding threshold required to release funds.
-     * @param _fundingDeadline (Optional) Date after which signaling OR funds cannot be sent.
-     * @param _contractExpiration (Optional) Date after which payouts must be complete or anyone can trigger refunds.
      * @param _uri URI for additional (off-chain) grant details such as description, milestones, etc.
+     * @param _extraData (Optional) Support for extensions to the Standard.
      */
     constructor(
         address[] memory _grantees,
         uint256[] memory _amounts,
-        address _manager,
         address _currency,
-        uint256 _targetFunding,
-        uint256 _fundingDeadline,
-        uint256 _contractExpiration,
-        bytes memory _uri
+        bytes memory _uri,
+        bytes memory _extraData
     )
         public
     {
+
+        //  _manager (Optional) Multisig or EOA address of grant manager.
+        //  _targetFunding (Optional) Funding threshold required to release funds.
+        //  _fundingDeadline (Optional) Date after which signaling OR funds cannot be sent.
+        //  _contractExpiration (Optional) Date after which payouts must be complete or anyone can trigger refunds.
+        //  _percentageOrFixed (Optional) Grantee targets are percentage based or fixed.
+        address _manager;
+        uint256 _targetFunding;
+        uint256 _fundingDeadline;
+        uint256 _contractExpiration;
+        bool _percentageOrFixed;
+        (
+            _manager,
+            _targetFunding,
+            _fundingDeadline,
+            _contractExpiration,
+            _percentageOrFixed
+        ) = abi.decode(_extraData, (address, uint256, uint256, uint256, bool));
 
         require(
             _currency == address(0) || TrustedToken(_currency).decimals() == 18,
@@ -117,7 +139,7 @@ contract ManagedCappedGrant is AbstractGrant, ReentrancyGuard {
                 "constructor::Invalid Argument. _manager cannot be a Grantee."
             );
 
-            totalGranteeAllocation = totalGranteeAllocation.add(currentAmount);
+            cumulativeTargetFunding = cumulativeTargetFunding.add(currentAmount);
             lastAddress = currentGrantee;
             grantees[currentGrantee].targetFunding = currentAmount;
 
@@ -126,8 +148,8 @@ contract ManagedCappedGrant is AbstractGrant, ReentrancyGuard {
         }
 
         require(
-            (_targetFunding == 0 || totalGranteeAllocation == _targetFunding),
-            "constructor::Invalid Argument. _targetFunding != totalGranteeAllocation."
+            (_targetFunding == 0 || cumulativeTargetFunding == _targetFunding),
+            "constructor::Invalid Argument. _targetFunding != cumulativeTargetFunding."
         );
 
     }
@@ -184,6 +206,7 @@ contract ManagedCappedGrant is AbstractGrant, ReentrancyGuard {
             // solhint-disable-next-line not-rely-on-time
             (fundingDeadline == 0 || fundingDeadline > now) &&
             (targetFunding == 0 || totalFunding < targetFunding) &&
+            fundingActive &&
             !grantCancelled
         );
     }
@@ -197,8 +220,24 @@ contract ManagedCappedGrant is AbstractGrant, ReentrancyGuard {
         view
         returns(uint256)
     {
-        return grantees[grantee].targetFunding
+
+        uint256 remaining;
+    
+        if (percentageOrFixed) {
+            uint256 eligiblePortion = Percentages.maxAllocation(
+                grantees[grantee].targetFunding,
+                cumulativeTargetFunding,
+                totalFunding
+            );
+
+            remaining = eligiblePortion
             .sub(grantees[grantee].payoutApproved);
+        } else {
+           remaining = grantees[grantee].targetFunding
+            .sub(grantees[grantee].payoutApproved);
+        }
+
+        return remaining;
     }
 
 
@@ -247,11 +286,6 @@ contract ManagedCappedGrant is AbstractGrant, ReentrancyGuard {
         // Update funding tally.
         totalFunding = newTotalFunding;
 
-        // Perpetual funding.
-        if(targetFunding == 0 && totalFunding > totalGranteeAllocation) {
-            addFundsToGranteeAllocation();
-        }
-
         // Defer to correct funding method.
         if(currency == address(0)) {
             fundWithEther(value, change);
@@ -271,6 +305,31 @@ contract ManagedCappedGrant is AbstractGrant, ReentrancyGuard {
 
 
     /*----------  Manager Methods  ----------*/
+
+    /**
+     * @dev Reduce a grantee's allocation by a specified value.
+     * @param value Amount to reduce by.
+     * @param grantee Grantee address to reduce allocation from.
+     */
+    function reduceAllocation(uint256 value, address grantee)
+        public
+        override
+        onlyManager
+    {
+
+        require(
+            grantees[grantee].targetFunding >= value,
+            "reduceAllocation::Invalid Argument. value cannot exceed grantee's targetFunding."
+        );
+
+        grantees[grantee].targetFunding.sub(value);
+
+        // After reducing allocation, do not accept new funds.
+        fundingActive = false;
+
+        emit LogAllocationReduction(grantee, value);
+
+    }
 
     /**
      * @dev Approve payment to a grantee.
@@ -349,23 +408,12 @@ contract ManagedCappedGrant is AbstractGrant, ReentrancyGuard {
      * @dev Approve refunding a portion of the contract's available balance.
      *      Refunds are split between donors based on their contribution to totalFunded.
      * @param value Amount to refund.
-     * @param grantee Grantee address to reduce allocation from.
      */
-    function approveRefund(uint256 value, address grantee)
+    function approveRefund(uint256 value)
         public
         override
         onlyManager
     {
-
-        if (grantee != address(0)) {
-            require(
-                remainingAllocation(grantee) >= value,
-                "approveRefund::Invalid Argument. Value greater than remaining allocation."
-            );
-
-            // Reduce allocation.
-            grantees[grantee].targetFunding = grantees[grantee].targetFunding.sub(value);
-        }
 
         require(
             value <= availableBalance(),
@@ -398,15 +446,11 @@ contract ManagedCappedGrant is AbstractGrant, ReentrancyGuard {
         returns(bool)
     {
 
-        uint256 percentContributed = donors[donor].funded
-            .mul(ATOMIC_UNITS).div(
-                totalFunding
-            );
-
-        // Donor's share of refund.
-        uint256 eligibleRefund = totalRefunded
-            .mul(percentContributed)
-            .div(ATOMIC_UNITS);
+        uint256 eligibleRefund = Percentages.maxAllocation(
+            donors[donor].funded,
+            totalFunding,
+            totalRefunded
+        );
 
         require(
             eligibleRefund >= donors[donor].refunded,
@@ -527,30 +571,6 @@ contract ManagedCappedGrant is AbstractGrant, ReentrancyGuard {
         );
     }
 
-    function addFundsToGranteeAllocation()
-        private
-    {
-
-        for (uint256 i = 0; i < granteeReference.length; i++) {
-
-            address grantee = granteeReference[i];
-
-            uint256 percentAllocated = grantees[grantee].targetFunding
-                .mul(ATOMIC_UNITS).div(
-                    totalGranteeAllocation
-                );
-
-            // Grantee's share of funding.
-            uint256 eligibleAllocation = totalFunding
-                .mul(percentAllocated)
-                .div(ATOMIC_UNITS);
-
-            grantees[grantee].targetFunding = eligibleAllocation;
-        }
-
-        // Update global state.
-        totalGranteeAllocation = totalFunding;
-    }
 
     /*----------  Fallback  ----------*/
 
