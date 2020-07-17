@@ -43,11 +43,6 @@ contract UnmanagedStream is ReentrancyGuard {
     /*----------  Events  ----------*/
 
     /**
-     * @dev Grant cancellation event.
-     */
-    event LogGrantCancellation();
-
-    /**
      * @dev Grant received funding.
      * @param donor Address funding the grant.
      * @param value Amount in WEI.
