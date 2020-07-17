@@ -28,8 +28,7 @@ contract UnmanagedStream is ReentrancyGuard {
     address[] private granteeReference;          // Reference to grantee addresses to allow for allocation top up.
     uint256 private cumulativeTargetFunding;     // Denominator for calculating grantee's percentage.
     bytes public uri;                            // URI for additional (off-chain) grant details such as description, milestones, etc.
-    uint256 public contractExpiration;           // (Optional) Date after which payouts must be complete or anyone can trigger refunds.
-    bool public grantCancelled;                  // Flag to indicate when grant is cancelled.
+    uint256 public totalFunding = 0;             // Cumulative funding donated by donors.
     mapping(address => Grantee) public grantees; // Grant recipients by address.
     /* solhint-enable max-line-length */
 
@@ -54,13 +53,6 @@ contract UnmanagedStream is ReentrancyGuard {
      * @param value Amount in WEI.
      */
     event LogFunding(address indexed donor, uint256 value);
-
-    /**
-     * @dev Grant paying grantee.
-     * @param grantee Address receiving payment.
-     * @param value Amount in WEI.
-     */
-    event LogPayment(address indexed grantee, uint256 value);
 
 
     /*----------  Constructor  ----------*/
@@ -127,7 +119,6 @@ contract UnmanagedStream is ReentrancyGuard {
 
         // Initialize globals.
         uri = _uri;
-        contractExpiration = _contractExpiration;
 
         // Initialize Grantees.
         address lastAddress = address(0);
@@ -162,110 +153,8 @@ contract UnmanagedStream is ReentrancyGuard {
     }
 
 
-    /*----------  Public Helpers  ----------*/
-
-    /**
-     * @dev Funding status check. Can fund if grant is not cancelled.
-     * @return true if can fund grant.
-     */
-    function canFund()
-        public
-        view
-        returns(bool)
-    {
-        return !grantCancelled;
-    }
-
-
     /*----------  Public Methods  ----------*/
 
-    /**
-     * @dev Fund a grant proposal.
-     * @param value Amount in WEI.
-     * @return true if successful.
-     */
-    function fund(uint256 value)
-        public
-        nonReentrant // OpenZeppelin mutex due to sending change if over-funded.
-        returns (bool)
-    {
-
-        require(
-            canFund(),
-            "fund::Status Error. Grant not open to funding."
-        );
-
-        require(
-            grantees[msg.sender].targetFunding == 0,
-            "fund::Permission Error. Grantee cannot fund."
-        );
-
-        // Defer to correct funding method.
-        pushPayment(value);
-
-        // Log events.
-        emit LogFunding(msg.sender, value);
-
-        return true;
-    }
-
-
-    /**
-     * @dev Cancel grant and enable refunds.
-     */
-    function cancelGrant()
-        public
-    {
-        require(
-            !grantCancelled,
-            "cancelGrant::Status Error. Already cancelled."
-        );
-
-        require(
-            // solhint-disable-next-line not-rely-on-time
-            (contractExpiration != 0 && contractExpiration <= now),
-            "cancelGrant::Invalid Date.Contract must be expired."
-        );
-
-        grantCancelled = true;
-
-        emit LogGrantCancellation();
-    }
-
- 
-    /*----------  Private Methods  ----------*/
-
-    /**
-     * @dev Pushes portion of payment to each grantee.
-     */
-    function pushPayment(uint256 value)
-        private
-        nonReentrant // OpenZeppelin mutex due to sending funds.
-    {
-
-        require(
-            value > 0,
-            "pushPayment::::Invalid Value. value must be greater than 0."
-        );
-
-        for (uint256 i = 0; i < granteeReference.length; i++) {
-            address payable currentGrantee = payable(granteeReference[i]);
-
-            uint256 eligiblePortion = Percentages.maxAllocation(
-                grantees[currentGrantee].targetFunding,
-                cumulativeTargetFunding,
-                value
-            );
-
-            require(
-                currentGrantee.send(eligiblePortion), // solhint-disable-line check-send-result
-                "pushPayment::Transfer Error. Unable to send eligiblePortion to Grantee."
-            );
-
-            emit LogPayment(currentGrantee, eligiblePortion);
-        }
-
-    }
 
 
     /*----------  Fallback  ----------*/
@@ -274,7 +163,38 @@ contract UnmanagedStream is ReentrancyGuard {
         external
         payable
     {
-        fund(msg.value);
+
+        require(
+            grantees[msg.sender].targetFunding == 0,
+            "fund::Permission Error. Grantee cannot fund."
+        );
+
+        // Defer to correct funding method.
+        require(
+            msg.value > 0,
+            "fallback::::Invalid Value. msg.value must be greater than 0."
+        );
+
+        for (uint256 i = 0; i < granteeReference.length; i++) {
+            address payable currentGrantee = payable(granteeReference[i]);
+
+            uint256 eligiblePortion = Percentages.maxAllocation(
+                grantees[currentGrantee].targetFunding,
+                cumulativeTargetFunding,
+                msg.value
+            );
+
+            require(
+                currentGrantee.send(eligiblePortion), // solhint-disable-line check-send-result
+                "fallback::Transfer Error. Unable to send eligiblePortion to Grantee."
+            );
+
+        }
+
+        totalFunding = totalFunding.add(msg.value);
+
+        emit LogFunding(msg.sender, msg.value);
+
     }
 
 }
