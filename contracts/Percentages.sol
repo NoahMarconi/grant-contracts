@@ -20,7 +20,7 @@ library Percentages {
         return ABDKMathQuad.div(num, den);
     }
 
-    function percentOfTotal(bytes16 percent, uint256 total)
+    function percentTimesTotal(bytes16 percent, uint256 total)
         internal
         pure
         returns (uint256)
@@ -31,4 +31,21 @@ library Percentages {
         return ABDKMathQuad.toUInt(res);
     }
 
+    function maxAllocation(uint256 contribution, uint256 totalPool, uint256 remainingPool)
+        internal
+        pure
+        returns (uint256)
+    {
+        bytes16 contributionPercent = Percentages.percentage(
+            contribution,
+            totalPool
+        );
+
+        uint256 contributionMaxAllocation = Percentages.percentTimesTotal(
+            contributionPercent,
+            remainingPool
+        );
+
+        return contributionMaxAllocation;
+    }
 }

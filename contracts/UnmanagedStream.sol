@@ -13,27 +13,62 @@ interface TrustedToken is IERC20 {
 }
 
 /**
- * @title Grant for d24n.
+ * @title Grant for Eth2.
  * @dev Managed                     (n)
  *      Funding Deadline            (n)
  *      Contract expiry             (y)
  *      With Token                  (n)
  *      Percentage based allocation (y)
+ *      Withdraw (pull payment)     (n)
+ *      This is a simplified grant which behaves as a simple payment splitter.
+ *      No refunds, managers, and payment are immediately pushed.
  * @author @NoahMarconi
  */
-contract D24nGrant is AbstractGrant, ReentrancyGuard {
+contract UnmanagedStream is ReentrancyGuard {
     using SafeMath for uint256;
-
-
-    /*----------  Constants  ----------*/
-
-    uint256 private constant ATOMIC_UNITS = 10 ** 18;
 
 
     /*----------  Global Variables  ----------*/
 
-    address[] private granteeReference;      // Reference to grantee addresses to allow for allocation top up.
-    uint256 private cumulativeTargetFunding; // denominator for calculating grantee's percentage.
+    /* solhint-disable max-line-length */
+    address[] private granteeReference;          // Reference to grantee addresses to allow for allocation top up.
+    uint256 private cumulativeTargetFunding;     // Denominator for calculating grantee's percentage.
+    bytes public uri;                            // URI for additional (off-chain) grant details such as description, milestones, etc.
+    uint256 public totalFunding;                 // Cumulative funding donated by donors.
+    uint256 public contractExpiration;           // (Optional) Date after which payouts must be complete or anyone can trigger refunds.
+    bool public grantCancelled;                  // Flag to indicate when grant is cancelled.
+    mapping(address => Grantee) public grantees; // Grant recipients by address.
+    /* solhint-enable max-line-length */
+
+
+    /*----------  Types  ----------*/
+
+    struct Grantee {
+        uint256 targetFunding;   // Funding amount targeted for Grantee.
+    }
+
+
+    /*----------  Events  ----------*/
+
+    /**
+     * @dev Grant cancellation event.
+     */
+    event LogGrantCancellation();
+
+    /**
+     * @dev Grant received funding.
+     * @param donor Address funding the grant.
+     * @param value Amount in WEI.
+     */
+    event LogFunding(address indexed donor, uint256 value);
+
+    /**
+     * @dev Grant paying grantee.
+     * @param grantee Address receiving payment.
+     * @param value Amount in WEI.
+     */
+    event LogPayment(address indexed grantee, uint256 value);
+
 
     /*----------  Constructor  ----------*/
 
@@ -72,6 +107,11 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
         );
 
         require(
+            _manager == address(0),
+            "constructor::Invalid Argument. Manager must be ADDRESS_ZERO."
+        );
+
+        require(
             _fundingDeadline == 0,
             "constructor::Invalid Argument. _fundingDeadline must be 0."
         );
@@ -94,7 +134,6 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
 
         // Initialize globals.
         uri = _uri;
-        currency = _currency;
         contractExpiration = _contractExpiration;
 
         // Initialize Grantees.
@@ -114,8 +153,8 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
             );
 
             require(
-                currentGrantee != _manager,
-                "constructor::Invalid Argument. _manager cannot be a Grantee."
+                currentGrantee != address(0),
+                "constructor::Invalid Argument. grantee address cannot be a ADDRESS_ZERO."
             );
 
             lastAddress = currentGrantee;
@@ -129,41 +168,8 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
 
     }
 
-    /*----------  Modifiers  ----------*/
-
-    modifier onlyManager() {
-        require(
-            isManager(msg.sender),
-            "onlyManager::Permission Error. Function can only be called by manager."
-        );
-
-        _;
-    }
 
     /*----------  Public Helpers  ----------*/
-
-    function isManager(address toCheck)
-        public
-        view
-        returns(bool)
-    {
-        return manager == toCheck;
-    }
-
-    /**
-     * @dev Get available grant balance.
-     * @return Balance remaining in contract.
-     */
-    function availableBalance()
-        public
-        override
-        view
-        returns(uint256)
-    {
-        return totalFunding
-            .sub(totalPaid)
-            .sub(totalRefunded);
-    }
 
     /**
      * @dev Funding status check. Can fund if grant is not cancelled.
@@ -171,24 +177,10 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
      */
     function canFund()
         public
-        override
         view
         returns(bool)
     {
         return !grantCancelled;
-    }
-
-    /**
-     * @dev Grantee specific check for remaining allocated funds.
-     * @param grantee's address.
-     */
-    function remainingAllocation(address grantee)
-        public
-        view
-        returns(uint256)
-    {
-        return grantees[grantee].targetFunding
-            .sub(grantees[grantee].payoutApproved);
     }
 
 
@@ -196,12 +188,11 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
 
     /**
      * @dev Fund a grant proposal.
-     * @param value Amount in WEI or ATOMIC_UNITS to fund.
-     * @return Cumulative funding received for this grant.
+     * @param value Amount in WEI.
+     * @return true if successful.
      */
     function fund(uint256 value)
         public
-        override
         nonReentrant // OpenZeppelin mutex due to sending change if over-funded.
         returns (bool)
     {
@@ -212,24 +203,12 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
         );
 
         require(
-            !isManager(msg.sender),
-            "fund::Permission Error. Grant Manager cannot fund."
-        );
-
-        require(
             grantees[msg.sender].targetFunding == 0,
             "fund::Permission Error. Grantee cannot fund."
         );
 
-        // Record Contribution.
-        donors[msg.sender].funded = donors[msg.sender].funded
-            .add(value);
-
-        // Update funding tally.
-        totalFunding = totalFunding.add(value);
-
         // Defer to correct funding method.
-        fundWithToken(value);
+        pushPayment(value);
 
         // Log events.
         emit LogFunding(msg.sender, value);
@@ -238,213 +217,39 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
     }
 
 
-    /*----------  Manager Methods  ----------*/
-
-    /**
-     * @dev Reduce a grantee's allocation by a specified value.
-     * @param value Amount to reduce by.
-     * @param grantee Grantee address to reduce allocation from.
-     */
-    function reduceAllocation(uint256 value, address grantee)
-        public
-        override
-        onlyManager
-    {
-
-        require(
-            grantees[grantee].targetFunding >= value,
-            "reduceAllocation::Invalid Argument. value cannot exceed grantee's targetFunding."
-        );
-
-        grantees[grantee].targetFunding.sub(value);
-
-        cumulativeTargetFunding = cumulativeTargetFunding.sub(value);
-
-        emit LogAllocationReduction(grantee, value);
-
-    }
-
-    /**
-     * @dev Approve payment to a grantee.
-     * @param value Amount in WEI or ATOMIC_UNITS to approve.
-     * @param grantee Recipient of payment.
-     */
-    function approvePayout(uint256 value, address grantee)
-        public
-        override
-        onlyManager
-        returns(bool)
-    {
-
-        require(
-            (value > 0),
-            "approvePayout::Value Error. Must be non-zero value."
-        );
-
-        require(
-            !grantCancelled,
-            "approvePayout::Status Error. Cannot approve if grant is cancelled."
-        );
-
-        bytes16 granteesPercent = Percentages.percentage(
-            grantees[grantee].targetFunding,
-            cumulativeTargetFunding
-        );
-
-        uint256 granteesMaxAllocation = Percentages.percentOfTotal(
-            granteesPercent,
-            totalFunding
-        );
-
-        require(
-            granteesMaxAllocation >= value,
-            "approvePayout::Invalid Argument. value cannot exceed granteesMaxAllocation."
-        );
-
-        // Update state.
-        totalPaid = totalPaid.add(value);
-        grantees[grantee].payoutApproved = grantees[grantee].payoutApproved.add(value);
-
-        emit LogPaymentApproval(grantee, value);
-
-        return true;
-    }
-
     /**
      * @dev Cancel grant and enable refunds.
      */
     function cancelGrant()
         public
-        override
     {
         require(
             !grantCancelled,
             "cancelGrant::Status Error. Already cancelled."
         );
 
-        if (!isManager(msg.sender)) {
-            // Non-manager may cancel grant if:
-            //      1. Funding goal not met before fundingDeadline.
-            //      2. Funds not completely dispersed before contractExpiration.
-            require(
-                // solhint-disable-next-line not-rely-on-time
-                (contractExpiration != 0 && contractExpiration <= now),
-                "cancelGrant::Invalid Sender. Sender must be manager or contract must be expired."
-            );
-        }
-
-        totalRefunded = totalRefunded.add(availableBalance());
+        require(
+            // solhint-disable-next-line not-rely-on-time
+            (contractExpiration != 0 && contractExpiration <= now),
+            "cancelGrant::Invalid Sender.Contract must be expired."
+        );
 
         grantCancelled = true;
 
         emit LogGrantCancellation();
     }
 
-    /**
-     * @dev Approve refunding a portion of the contract's available balance.
-     *      Refunds are split between donors based on their contribution to totalFunded.
-     * @param value Amount to refund.
-     */
-    function approveRefund(uint256 value) // solhint-disable-line no-unused-vars
-        public
-        override
-        onlyManager
-    {
-        require(
-            false,
-            "approveRefund::Not Permitted. Partial Refunds not permitted if no targetFunding. cancelGrant instead."
-        );
-    }
-
-
-    /*----------  Withdrawal Methods  ----------*/
-
-    /**
-     * @dev Withdraws portion of the contract's available balance.
-     *      Amount donor receives is proportionate to their funding contribution.
-     * @param donor Donor address to refund.
-     * @return true if withdraw successful.
-     */
-    function withdrawRefund(address payable donor)
-        public
-        override
-        nonReentrant // OpenZeppelin mutex due to sending funds.
-        returns(bool)
-    {
-
-        bytes16 percentContributed = Percentages.percentage(
-            donors[donor].funded,
-            totalFunding
-        );
-
-        // Donor's share of refund.
-        uint256 eligibleRefund = Percentages.percentOfTotal(
-            percentContributed,
-            totalRefunded
-        );
-
-        require(
-            eligibleRefund > donors[donor].refunded,
-            "withdrawRefund::Error. Donor has already withdrawn eligible refund."
-        );
-
-        // Minus previous withdrawals.
-        eligibleRefund = eligibleRefund.sub(donors[donor].refunded);
-
-        // Update state.
-        donors[donor].refunded = donors[donor].refunded.add(eligibleRefund);
-
-        // Send funds.
-        require(
-            TrustedToken(currency)
-                .transfer(donor, eligibleRefund),
-            "withdrawRefund::Transfer Error. ERC20 token transfer failed."
-        );
-
-        emit LogRefund(donor, eligibleRefund);
-
-        return true;
-    }
-
-    /**
-     * @dev Withdraws portion of the contract's available balance.
-     *      Amount grantee receives is their total payoutApproved - totalPaid.
-     * @param grantee Grantee address to refund.
-     * @return true if withdraw successful.
-     */
-    function withdrawPayout(address payable grantee)
-        public
-        override
-        nonReentrant // OpenZeppelin mutex due to sending funds.
-        returns(bool)
-    {
-
-        // Amount to be paid.
-        // Will throw if grantees[grantee].payoutApproved < grantees[grantee].totalPaid
-        uint256 eligiblePayout = grantees[grantee].payoutApproved
-            .sub(grantees[grantee].totalPaid);
-
-
-        // Update state.
-        grantees[grantee].totalPaid = grantees[grantee].totalPaid
-            .add(eligiblePayout);
-
-        // Send funds.
-        require(
-            TrustedToken(currency)
-                .transfer(grantee, eligiblePayout),
-            "withdrawPayout::Transfer Error. ERC20 token transfer failed."
-        );
-
-        emit LogPayment(grantee, eligiblePayout);
-    }
-
-
+ 
     /*----------  Private Methods  ----------*/
 
-    function fundWithToken(uint256 value)
+    /**
+     * @dev Pushes portion of payment to each grantee.
+     */
+    function pushPayment(uint256 value)
         private
+        nonReentrant // OpenZeppelin mutex due to sending funds.
     {
+
         require(
             msg.value == 0,
             "fundWithToken::Currency Error. Cannot send Ether to a token funded grant."
@@ -455,11 +260,33 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
             "fundWithToken::::Invalid Value. value must be greater than 0."
         );
 
-        require(
-            TrustedToken(currency)
-                .transferFrom(msg.sender, address(this), value),
-            "fund::Transfer Error. ERC20 token transferFrom failed."
-        );
+        for (uint256 i = 0; i < granteeReference.length; i++) {
+            address payable currentGrantee = payable(granteeReference[i]);
+
+            uint256 eligiblePortion = Percentages.maxAllocation(
+                grantees[currentGrantee].targetFunding,
+                cumulativeTargetFunding,
+                value
+            );
+
+            require(
+                currentGrantee.send(eligiblePortion), // solhint-disable-line check-send-result
+                "pushPayment::Transfer Error. Unable to send eligiblePortion to Grantee."
+            );
+
+            emit LogPayment(currentGrantee, eligiblePortion);
+        }
+
+    }
+
+
+    /*----------  Fallback  ----------*/
+
+    receive()
+        external
+        payable
+    {
+        fund(msg.value);
     }
 
 }

@@ -119,6 +119,11 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
                 "constructor::Invalid Argument. _manager cannot be a Grantee."
             );
 
+            require(
+                currentGrantee != address(0),
+                "constructor::Invalid Argument. grantee address cannot be a ADDRESS_ZERO."
+            );
+
             lastAddress = currentGrantee;
             grantees[currentGrantee].targetFunding = currentAmount;
 
@@ -274,13 +279,9 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
             "approvePayout::Status Error. Cannot approve if grant is cancelled."
         );
 
-        bytes16 granteesPercent = Percentages.percentage(
+        uint256 granteesMaxAllocation = Percentages.maxAllocation(
             grantees[grantee].targetFunding,
-            cumulativeTargetFunding
-        );
-
-        uint256 granteesMaxAllocation = Percentages.percentOfTotal(
-            granteesPercent,
+            cumulativeTargetFunding,
             totalFunding
         );
 
@@ -360,14 +361,10 @@ contract D24nGrant is AbstractGrant, ReentrancyGuard {
         returns(bool)
     {
 
-        bytes16 percentContributed = Percentages.percentage(
-            donors[donor].funded,
-            totalFunding
-        );
-
         // Donor's share of refund.
-        uint256 eligibleRefund = Percentages.percentOfTotal(
-            percentContributed,
+        uint256 eligibleRefund = Percentages.maxAllocation(
+            donors[donor].funded,
+            totalFunding,
             totalRefunded
         );
 
