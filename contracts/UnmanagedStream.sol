@@ -10,7 +10,7 @@ import "./Percentages.sol";
  * @title Grant for Eth2.
  * @dev Managed                     (n)
  *      Funding Deadline            (n)
- *      Contract expiry             (y)
+ *      Contract expiry             (n)
  *      With Token                  (n)
  *      Percentage based allocation (y)
  *      Withdraw (pull payment)     (n)
