@@ -11,7 +11,8 @@ abstract contract GranteeTypes {
     /*----------  Globals  ----------*/
 
     mapping(address => Grantee) public grantees; // Grant recipients by address.
-    address[] public granteeReference;          // Reference to grantee addresses to allow for allocation top up.
+    address[] public granteeReference;           // Reference to grantee addresses to allow for iterating over grantees.
+    uint256 public cumulativeTargetFunding;      // Denominator for calculating grantee's percentage.
 
     /*----------  Types  ----------*/
 

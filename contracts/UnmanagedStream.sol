@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity >=0.6.8 <0.7.0;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "./shared/Percentages.sol";
-import "./shared/GranteeTypes.sol";
+import "./shared/GranteeConstructor.sol";
 
 /**
  * @title Grant for Eth2.
@@ -20,14 +19,13 @@ import "./shared/GranteeTypes.sol";
  *      WARNING: vulnerable to sending to Gas Token generating addresses. Trust in grantees not doing so is required.
  * @author @NoahMarconi
  */
-contract UnmanagedStream is ReentrancyGuard, GranteeTypes {
+contract UnmanagedStream is ReentrancyGuard, GranteeConstructor {
     using SafeMath for uint256;
 
 
     /*----------  Global Variables  ----------*/
 
     /* solhint-disable max-line-length */
-    uint256 private cumulativeTargetFunding;     // Denominator for calculating grantee's percentage.
     bytes public uri;                            // URI for additional (off-chain) grant details such as description, milestones, etc.
     /* solhint-enable max-line-length */
 
@@ -60,6 +58,7 @@ contract UnmanagedStream is ReentrancyGuard, GranteeTypes {
         bytes memory _extraData
     )
         public
+        GranteeConstructor(_grantees, _amounts)
     {
 
         require(
@@ -67,48 +66,8 @@ contract UnmanagedStream is ReentrancyGuard, GranteeTypes {
             "constructor::Invalid Argument. Currency must be ADDRESS_ZERO."
         );
 
-        require(
-            _grantees.length > 0,
-            "constructor::Invalid Argument. Must have one or more grantees."
-        );
-
-        require(
-            _grantees.length == _amounts.length,
-            "constructor::Invalid Argument. _grantees.length must equal _amounts.length"
-        );
-
         // Initialize globals.
         uri = _uri;
-
-        // Initialize Grantees.
-        address lastAddress = address(0);
-        for (uint256 i = 0; i < _grantees.length; i++) {
-            address currentGrantee = _grantees[i];
-            uint256 currentAmount = _amounts[i];
-
-            require(
-                currentAmount > 0,
-                "constructor::Invalid Argument. currentAmount must be greater than 0."
-            );
-
-            require(
-                currentGrantee > lastAddress,
-                "constructor::Invalid Argument. Duplicate or out of order _grantees."
-            );
-
-            require(
-                currentGrantee != address(0),
-                "constructor::Invalid Argument. grantee address cannot be a ADDRESS_ZERO."
-            );
-
-            lastAddress = currentGrantee;
-            grantees[currentGrantee].targetFunding = currentAmount;
-
-            cumulativeTargetFunding = cumulativeTargetFunding.add(currentAmount);
-
-            // Store address as reference.
-            granteeReference.push(currentGrantee);
-        }
 
     }
 
