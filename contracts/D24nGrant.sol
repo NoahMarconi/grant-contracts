@@ -6,7 +6,8 @@ import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "./AbstractGrant.sol";
-import "./Percentages.sol";
+import "./shared/Percentages.sol";
+import "./shared/GranteeTypes.sol";
 
 interface TrustedToken is IERC20 {
     function decimals() external view returns (uint8);

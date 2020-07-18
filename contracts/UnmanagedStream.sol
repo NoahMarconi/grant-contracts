@@ -4,7 +4,8 @@ pragma solidity >=0.6.8 <0.7.0;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
-import "./Percentages.sol";
+import "./shared/Percentages.sol";
+import "./shared/GranteeTypes.sol";
 
 /**
  * @title Grant for Eth2.
@@ -15,29 +16,20 @@ import "./Percentages.sol";
  *      Percentage based allocation (y)
  *      Withdraw (pull payment)     (n)
  *      This is a simplified grant which behaves as a simple payment splitter.
- *      No refunds, managers, and payment are immediately pushed.
+ *      No refunds or managers; payment are immediately pushed.
+ *      WARNING: vulnerable to sending to Gas Token generating addresses. Trust in grantees not doing so is required.
  * @author @NoahMarconi
  */
-contract UnmanagedStream is ReentrancyGuard {
+contract UnmanagedStream is ReentrancyGuard, GranteeTypes {
     using SafeMath for uint256;
 
 
     /*----------  Global Variables  ----------*/
 
     /* solhint-disable max-line-length */
-    address[] private granteeReference;          // Reference to grantee addresses to allow for allocation top up.
     uint256 private cumulativeTargetFunding;     // Denominator for calculating grantee's percentage.
     bytes public uri;                            // URI for additional (off-chain) grant details such as description, milestones, etc.
-    uint256 public totalFunding = 0;             // Cumulative funding donated by donors.
-    mapping(address => Grantee) public grantees; // Grant recipients by address.
     /* solhint-enable max-line-length */
-
-
-    /*----------  Types  ----------*/
-
-    struct Grantee {
-        uint256 targetFunding;   // Funding amount targeted for Grantee.
-    }
 
 
     /*----------  Events  ----------*/
@@ -129,11 +121,6 @@ contract UnmanagedStream is ReentrancyGuard {
         nonReentrant
     {
 
-        require(
-            grantees[msg.sender].targetFunding == 0,
-            "fund::Permission Error. Grantee cannot fund."
-        );
-
         // Defer to correct funding method.
         require(
             msg.value > 0,
@@ -156,8 +143,6 @@ contract UnmanagedStream is ReentrancyGuard {
             );
 
         }
-
-        totalFunding = totalFunding.add(msg.value);
 
         emit LogFunding(msg.sender, msg.value);
 
