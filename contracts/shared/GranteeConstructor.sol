@@ -2,9 +2,10 @@
 pragma solidity >=0.6.8 <0.7.0;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./GranteeTypes.sol";
+import "./AbstractGrantee.sol";
+import "./Percentages.sol";
 
-contract GranteeConstructor is GranteeTypes {
+abstract contract GranteeConstructor is AbstractGrantee {
     using SafeMath for uint256;
 
     /*----------  Constructor  ----------*/
@@ -13,10 +14,12 @@ contract GranteeConstructor is GranteeTypes {
      * @dev Grant creation function. May be called by donors, grantees, or any other relevant party.
      * @param _grantees Sorted recipients of donated funds.
      * @param _amounts Respective allocations for each Grantee (must follow sort order of _grantees).
+     * @param _percentageBased Grantee amounts are percentage based (if true) or fixed (if false).
      */
     constructor(
         address[] memory _grantees,
-        uint256[] memory _amounts
+        uint256[] memory _amounts,
+        bool _percentageBased
     )
         public
     {
@@ -62,6 +65,41 @@ contract GranteeConstructor is GranteeTypes {
             granteeReference.push(currentGrantee);
         }
 
+        percentageBased = _percentageBased;
+
+    }
+
+    /*----------  Public Methods  ----------*/
+
+
+    /**
+     * @dev Grantee specific check for remaining allocated funds.
+     * @param grantee's address.
+     */
+    function remainingAllocation(address grantee)
+        public
+        override
+        view
+        returns(uint256)
+    {
+
+        uint256 remaining;
+
+        if (percentageBased) {
+            uint256 eligiblePortion = Percentages.maxAllocation(
+                grantees[grantee].targetFunding,
+                cumulativeTargetFunding,
+                totalFunding
+            );
+
+            remaining = eligiblePortion
+            .sub(grantees[grantee].payoutApproved);
+        } else {
+           remaining = grantees[grantee].targetFunding
+            .sub(grantees[grantee].payoutApproved);
+        }
+
+        return remaining;
     }
 
 }

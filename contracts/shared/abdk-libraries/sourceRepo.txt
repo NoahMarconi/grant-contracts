@@ -1,1 +1,0 @@
-https://github.com/abdk-consulting/abdk-libraries-solidity/blob/master/ABDKMathQuad.md

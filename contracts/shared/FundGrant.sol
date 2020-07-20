@@ -3,110 +3,24 @@ pragma solidity >=0.6.8 <0.7.0;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
-import "./shared/ManagedAllocation.sol";
-import "./shared/PullPaymentGrant.sol";
-import "./shared/GranteeConstructor.sol";
-import "./shared/ManagedPayout.sol";
-import "./shared/ManagedRefund.sol";
-import "./shared/CancelableRefundable.sol";
-import "./shared/Percentages.sol";
-import "./shared/ITrustedToken.sol";
-
+import "./DonorTypes.sol";
+import "./interfaces/IManager.sol";
+import "./GranteeTypes.sol";
+import "./AbstractGrant.sol";
+import "./AbstractGrantee.sol";
+import "./ITrustedToken.sol";
 
 /**
- * @title Grants Spec Contract.
- * @dev Grant request, funding, and management.
- *      Managed                     (y)
- *      Funding Deadline            (y/n)
- *      Contract expiry             (y/n)
- *      With Token                  (y/n)
- *      Percentage based allocation (y)
- *      Withdraw (pull payment)     (y)
+ * @title Fund Grant Abstract Contract.
+ * @dev Handles funding the grant.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-contract ManagedCappedGrant is PullPaymentGrant, GranteeConstructor, ManagedAllocation, ManagedPayout, ManagedRefund, CancelableRefundable {
+abstract contract FundGrant is ReentrancyGuard, AbstractGrant, GranteeTypes, IManager, DonorTypes {
     using SafeMath for uint256;
 
     /*----------  Global Variables  ----------*/
 
     bool fundingActive = true;               // When false new funding is rejected.
-
-
-    /*----------  Constructor  ----------*/
-
-    /**
-     * @dev Grant creation function. May be called by grantors, grantees, or any other relevant party.
-     * @param _grantees Sorted recipients of unlocked funds.
-     * @param _amounts Respective allocations for each Grantee (must follow sort order of _grantees).
-     * @param _currency (Optional) If null, amount is in wei, otherwise address of ERC20-compliant contract.
-     * @param _uri URI for additional (off-chain) grant details such as description, milestones, etc.
-     * @param _extraData (Optional) Support for extensions to the Standard.
-     */
-    constructor(
-        address[] memory _grantees,
-        uint256[] memory _amounts,
-        address _currency,
-        bytes memory _uri,
-        bytes memory _extraData
-    )
-        public
-        GranteeConstructor(_grantees, _amounts, false)
-    {
-
-        //  _manager (Optional) Multisig or EOA address of grant manager.
-        //  _targetFunding (Optional) Funding threshold required to release funds.
-        //  _fundingDeadline (Optional) Date after which signaling OR funds cannot be sent.
-        //  _contractExpiration (Optional) Date after which payouts must be complete or anyone can trigger refunds.
-        //  _percentageOrFixed (Optional) Grantee targets are percentage based or fixed.
-        address _manager;
-        uint256 _targetFunding;
-        uint256 _fundingDeadline;
-        uint256 _contractExpiration;
-        bool _percentageOrFixed;
-        (
-            _manager,
-            _targetFunding,
-            _fundingDeadline,
-            _contractExpiration,
-            _percentageOrFixed
-        ) = abi.decode(_extraData, (address, uint256, uint256, uint256, bool));
-
-        require(
-            _currency == address(0) || ITrustedToken(_currency).decimals() == 18,
-            "constructor::Invalid Argument. Token must have 18 decimal places."
-        );
-
-        require(
-            _fundingDeadline == 0 || _fundingDeadline < _contractExpiration,
-            "constructor::Invalid Argument. _fundingDeadline not < _contractExpiration."
-        );
-
-        require(
-        // solhint-disable-next-line not-rely-on-time
-            _fundingDeadline == 0 || _fundingDeadline > now,
-            "constructor::Invalid Argument. _fundingDeadline not > now."
-        );
-
-        require(
-        // solhint-disable-next-line not-rely-on-time
-            _contractExpiration == 0 || _contractExpiration > now,
-            "constructor::Invalid Argument. _contractExpiration not > now."
-        );
-
-        // Initialize globals.
-        uri = _uri;
-        manager = _manager;
-        currency = _currency;
-        targetFunding = _targetFunding;
-        fundingDeadline = _fundingDeadline;
-        contractExpiration = _contractExpiration;
-
-        require(
-            (_targetFunding == 0 || cumulativeTargetFunding == _targetFunding),
-            "constructor::Invalid Argument. _targetFunding != cumulativeTargetFunding."
-        );
-
-    }
 
 
     /*----------  Public Helpers  ----------*/
@@ -241,12 +155,5 @@ contract ManagedCappedGrant is PullPaymentGrant, GranteeConstructor, ManagedAllo
         );
     }
 
-    /*----------  Fallback  ----------*/
 
-    receive()
-        external
-        payable
-    {
-        fund(msg.value);
-    }
 }

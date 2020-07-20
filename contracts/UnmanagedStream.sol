@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.8 <0.7.0;
 
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "./shared/Percentages.sol";
 import "./shared/GranteeConstructor.sol";
@@ -20,14 +19,6 @@ import "./shared/GranteeConstructor.sol";
  * @author @NoahMarconi
  */
 contract UnmanagedStream is ReentrancyGuard, GranteeConstructor {
-    using SafeMath for uint256;
-
-
-    /*----------  Global Variables  ----------*/
-
-    /* solhint-disable max-line-length */
-    bytes public uri;                            // URI for additional (off-chain) grant details such as description, milestones, etc.
-    /* solhint-enable max-line-length */
 
 
     /*----------  Events  ----------*/
@@ -57,8 +48,8 @@ contract UnmanagedStream is ReentrancyGuard, GranteeConstructor {
         bytes memory _uri,
         bytes memory _extraData
     )
+        GranteeConstructor(_grantees, _amounts, true)
         public
-        GranteeConstructor(_grantees, _amounts)
     {
 
         require(
@@ -80,7 +71,6 @@ contract UnmanagedStream is ReentrancyGuard, GranteeConstructor {
         nonReentrant
     {
 
-        // Defer to correct funding method.
         require(
             msg.value > 0,
             "fallback::Invalid Value. msg.value must be greater than 0."
