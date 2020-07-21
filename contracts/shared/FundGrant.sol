@@ -3,19 +3,18 @@ pragma solidity >=0.6.8 <0.7.0;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
-import "./DonorTypes.sol";
+import "./interfaces/IBaseGrant.sol";
+import "./interfaces/IDonor.sol";
 import "./interfaces/IManager.sol";
-import "./GranteeTypes.sol";
-import "./AbstractGrant.sol";
-import "./AbstractGrantee.sol";
-import "./ITrustedToken.sol";
+import "./interfaces/IGrantee.sol";
+import "./interfaces/ITrustedToken.sol";
 
 /**
  * @title Fund Grant Abstract Contract.
  * @dev Handles funding the grant.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-abstract contract FundGrant is ReentrancyGuard, AbstractGrant, GranteeTypes, IManager, DonorTypes {
+abstract contract FundGrant is ReentrancyGuard, IBaseGrant, IGrantee, IManager, IDonor {
     using SafeMath for uint256;
 
     /*----------  Global Variables  ----------*/
@@ -36,12 +35,17 @@ abstract contract FundGrant is ReentrancyGuard, AbstractGrant, GranteeTypes, IMa
         view
         returns(bool)
     {
+
+        uint256 fundingDeadline = this.getFundingDeadline();
+        uint256 targetFunding = this.getTargetFunding();
+        uint256 totalFunding = this.getTotalFunding();
+
         return (
             // solhint-disable-next-line not-rely-on-time
             (fundingDeadline == 0 || fundingDeadline > now) &&
             (targetFunding == 0 || totalFunding < targetFunding) &&
             fundingActive &&
-            !grantCancelled
+            !this.getGrantCancelled()
         );
     }
 
@@ -65,33 +69,36 @@ abstract contract FundGrant is ReentrancyGuard, AbstractGrant, GranteeTypes, IMa
         );
 
         require(
-            !isManager(msg.sender),
+            !this.isManager(msg.sender),
             "fund::Permission Error. Grant Manager cannot fund."
         );
 
         require(
-            grantees[msg.sender].targetFunding == 0,
+            this.getTargetFunding(msg.sender) == 0,
             "fund::Permission Error. Grantee cannot fund."
         );
 
-        uint256 newTotalFunding = totalFunding.add(value);
+        uint256 newTotalFunding = this.getTotalFunding().add(value);
 
+        uint256 _targetFunding = this.getTargetFunding();
         uint256 change = 0;
-        if(targetFunding != 0 && newTotalFunding > targetFunding) {
-            change = newTotalFunding.sub(targetFunding);
-            newTotalFunding = targetFunding;
+        if(_targetFunding != 0 && newTotalFunding > _targetFunding) {
+            change = newTotalFunding.sub(_targetFunding);
+            newTotalFunding = _targetFunding;
         }
 
         // Record Contribution.
-        donors[msg.sender].funded = donors[msg.sender].funded
-            .add(value)
-            .sub(change); // Account for change from over-funding.
+        this.setDonorFunded(
+            msg.sender,
+            this.getDonorFunded().add(value).sub(change) // Account for change from over-funding.
+        );
+
 
         // Update funding tally.
         totalFunding = newTotalFunding;
 
         // Defer to correct funding method.
-        if(currency == address(0)) {
+        if(this.getCurrency() == address(0)) {
             fundWithEther(value, change);
         } else {
             fundWithToken(value, change);

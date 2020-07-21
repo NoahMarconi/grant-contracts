@@ -69,37 +69,4 @@ abstract contract GranteeConstructor is AbstractGrantee {
 
     }
 
-    /*----------  Public Methods  ----------*/
-
-
-    /**
-     * @dev Grantee specific check for remaining allocated funds.
-     * @param grantee's address.
-     */
-    function remainingAllocation(address grantee)
-        public
-        override
-        view
-        returns(uint256)
-    {
-
-        uint256 remaining;
-
-        if (percentageBased) {
-            uint256 eligiblePortion = Percentages.maxAllocation(
-                grantees[grantee].targetFunding,
-                cumulativeTargetFunding,
-                totalFunding
-            );
-
-            remaining = eligiblePortion
-            .sub(grantees[grantee].payoutApproved);
-        } else {
-           remaining = grantees[grantee].targetFunding
-            .sub(grantees[grantee].payoutApproved);
-        }
-
-        return remaining;
-    }
-
 }

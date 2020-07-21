@@ -6,13 +6,14 @@ import "../interfaces/IDonor.sol";
 /**
  * @title Grants Spec Abstract Contract.
  * @dev Grant request, funding, and management.
- * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
+ * @author @NoahMarconi
  */
 abstract contract DonorTypes is IDonor {
 
     /*----------  Globals  ----------*/
 
-    mapping(address => Donor) public donors;     // Donors by address.
+    mapping(address => uint256) public donorFunded;     // Cumulative amount funded.
+    mapping(address => uint256) public donorRefunded;   // Cumulative amount refunded.
 
 
 }

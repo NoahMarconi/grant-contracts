@@ -96,5 +96,4 @@ interface IBaseGrant {
         view
         returns(bool);
 
-
 }

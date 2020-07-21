@@ -8,8 +8,8 @@ import "../interfaces/IGrantee.sol";
 
 /**
  * @title Managed Allocation Abstract Contract.
- * @dev Handles reduction of grantee aloocations.
- * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
+ * @dev Handles reduction of grantee allocations.
+ * @author @NoahMarconi
  */
 abstract contract ManagedAllocation is IManager, IGrantee {
     using SafeMath for uint256;
