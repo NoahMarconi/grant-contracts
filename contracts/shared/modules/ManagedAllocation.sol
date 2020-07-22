@@ -12,7 +12,7 @@ import "../storage/AbstractGrantee.sol";
  * @dev Handles reduction of grantee allocations.
  * @author @NoahMarconi
  */
-abstract contract ManagedAllocation is AbstractGrantee,  IManager {
+abstract contract ManagedAllocation is AbstractGrantee, IManager {
     using SafeMath for uint256;
 
     /*----------  Events  ----------*/

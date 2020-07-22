@@ -15,7 +15,7 @@ import "../interfaces/IGranteeAllocation.sol";
  * @dev Handles approval of grantee payouts.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-abstract contract ManagedPayout is AbstractBaseGrant, AbstractGrantee, IManager, IFunding, IGranteeAllocation  {
+abstract contract ManagedPayout is IManager, IFunding, IGranteeAllocation, AbstractBaseGrant, AbstractGrantee {
     using SafeMath for uint256;
 
     /*----------  Events  ----------*/

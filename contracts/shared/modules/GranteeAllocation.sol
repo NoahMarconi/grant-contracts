@@ -13,7 +13,7 @@ import "../libraries/Percentages.sol";
  * @dev Grant request, funding, and management.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-abstract contract AbstractGranteeAllocation is IGrantee, IGranteeAllocation, IFunding {
+abstract contract GranteeAllocation is IGrantee, IGranteeAllocation, IFunding {
     using SafeMath for uint256;
 
     /*----------  Public Methods  ----------*/

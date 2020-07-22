@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.8 <0.7.0;
 
+import "../interfaces/IManager.sol";
+
 
 /**
  * @title Grants Spec Abstract Contract.
  * @dev Grant request, funding, and management.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-abstract contract AbstractManager {
+abstract contract AbstractManager is IManager {
 
     /*----------  Globals  ----------*/
 
@@ -18,6 +20,7 @@ abstract contract AbstractManager {
 
     function requireManager()
         public
+        override
         view
     {
         require(
@@ -28,6 +31,7 @@ abstract contract AbstractManager {
 
     function isManager(address toCheck)
         public
+        override
         view
         returns(bool)
     {

@@ -2,8 +2,10 @@
 pragma solidity >=0.6.8 <0.7.0;
 
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
-import "./shared/Percentages.sol";
+import "./shared/libraries/Percentages.sol";
 import "./shared/GranteeConstructor.sol";
+import "./shared/storage/AbstractFunding.sol";
+import "./shared/storage/AbstractBaseGrant.sol";
 
 /**
  * @title Grant for Eth2.
@@ -18,7 +20,7 @@ import "./shared/GranteeConstructor.sol";
  *      WARNING: vulnerable to sending to Gas Token generating addresses. Trust in grantees not doing so is required.
  * @author @NoahMarconi
  */
-contract UnmanagedStream is ReentrancyGuard, GranteeConstructor {
+contract UnmanagedStream is ReentrancyGuard, AbstractBaseGrant, AbstractFunding, GranteeConstructor {
 
 
     /*----------  Events  ----------*/
@@ -58,7 +60,7 @@ contract UnmanagedStream is ReentrancyGuard, GranteeConstructor {
         );
 
         // Initialize globals.
-        uri = _uri;
+        setUri(_uri);
 
     }
 
@@ -76,12 +78,12 @@ contract UnmanagedStream is ReentrancyGuard, GranteeConstructor {
             "fallback::Invalid Value. msg.value must be greater than 0."
         );
 
-        for (uint256 i = 0; i < granteeReference.length; i++) {
-            address payable currentGrantee = payable(granteeReference[i]);
+        for (uint256 i = 0; i < this.getGranteeReferenceLength(); i++) {
+            address payable currentGrantee = payable(this.getGranteeReference(i));
 
             uint256 eligiblePortion = Percentages.maxAllocation(
-                grantees[currentGrantee].targetFunding,
-                cumulativeTargetFunding,
+                this.getGranteeTargetFunding(currentGrantee),
+                this.getCumulativeTargetFunding(),
                 msg.value
             );
 
@@ -92,6 +94,8 @@ contract UnmanagedStream is ReentrancyGuard, GranteeConstructor {
             );
 
         }
+
+        increaseTotalFundingBy(msg.value);
 
         emit LogFunding(msg.sender, msg.value);
 

@@ -24,10 +24,83 @@ abstract contract AbstractBaseGrant is IBaseGrant {
     /* solhint-enable max-line-length */
 
 
+    /*----------  Shared Getters  ----------*/
+
+    function getUri()
+        public
+        override
+        view
+        returns(bytes memory)
+    {
+        return uri;
+    }
+
+    function getContractExpiration()
+        public
+        override
+        view
+        returns(uint256)
+    {
+        return contractExpiration;
+    }
+
+    function getFundingDeadline()
+        public
+        override
+        view
+        returns(uint256)
+    {
+        return fundingDeadline;
+    }
+
+    function getTargetFunding()
+        public
+        override
+        view
+        returns(uint256)
+    {
+        return targetFunding;
+    }
+
+    function getTotalPaid()
+        public
+        override
+        view
+        returns(uint256)
+    {
+        return totalPaid;
+    }
+
+    function getGrantCancelled()
+        public
+        override
+        view
+        returns(bool)
+    {
+        return grantCancelled;
+    }
+
+    function getCurrency()
+        public
+        override
+        view
+        returns(address)
+    {
+        return currency;
+    }
+
+    /*----------  Shared Setters  ----------*/
+
     function setTotalPaid(uint256 value)
         internal
     {
         totalPaid = value;
+    }
+
+    function setUri(bytes memory value)
+        internal
+    {
+        uri = value;
     }
 
     function setGrantCancelled(bool value)

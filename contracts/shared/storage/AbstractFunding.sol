@@ -39,13 +39,19 @@ abstract contract AbstractFunding is IFunding {
     /*----------  Shared Setters  ----------*/
 
     /**
-     * @dev Set cumulative funding donated by donors.
-     * @param value new total funding amount.
+     * @dev Increase cumulative funding donated by donors.
+     * @param value amount to increase total funding by.
      */
-    function setTotalFunding(uint256 value)
+    function increaseTotalFundingBy(uint256 value)
         internal
     {
         totalFunding = totalFunding.add(value);
+    }
+
+    function setTotalFunding(uint256 value)
+        internal
+    {
+        totalFunding = value;
     }
 
 }

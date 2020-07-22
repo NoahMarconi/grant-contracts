@@ -2,7 +2,7 @@
 pragma solidity >=0.6.8 <0.7.0;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "../storage/AbstractRefundable.sol";
+import "./Refundable.sol";
 import "../interfaces/IManager.sol";
 
 /**
@@ -10,7 +10,7 @@ import "../interfaces/IManager.sol";
  * @dev Grant request, funding, and management.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-abstract contract ManagedRefund is IManager, AbstractRefundable {
+abstract contract ManagedRefund is IManager, Refundable {
     using SafeMath for uint256;
 
 

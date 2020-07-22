@@ -16,7 +16,7 @@ import "../interfaces/IFunding.sol";
  * @dev Grant request, funding, and management.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-abstract contract AbstractRefundable is ReentrancyGuard, IBaseGrant, IDonorRefund, IDonorFund, IFunding  {
+abstract contract Refundable is IBaseGrant, ReentrancyGuard, IFunding, IDonorFund, IDonorRefund {
     using SafeMath for uint256;
 
 

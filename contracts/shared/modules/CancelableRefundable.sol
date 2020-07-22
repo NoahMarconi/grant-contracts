@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.8 <0.7.0;
 
-import "../storage/AbstractRefundable.sol";
+import "./Refundable.sol";
 import "../storage/AbstractBaseGrant.sol";
 import "../interfaces/IManager.sol";
 
@@ -9,7 +9,7 @@ import "../interfaces/IManager.sol";
  * @title Cancelable and Refundable Grant.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-abstract contract CancelableRefundable is IManager, AbstractRefundable, AbstractBaseGrant  {
+abstract contract CancelableRefundable is IManager, Refundable, AbstractBaseGrant  {
 
     /*----------  Events  ----------*/
 
