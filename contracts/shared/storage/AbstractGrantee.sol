@@ -81,6 +81,7 @@ abstract contract AbstractGrantee is IGrantee {
      */
     function getGranteeReferenceLength()
         external
+        override
         view
         returns(uint256)
     {
@@ -94,6 +95,7 @@ abstract contract AbstractGrantee is IGrantee {
      */
     function getGranteeReference(uint256 index)
         external
+        override
         view
         returns(address)
     {
@@ -107,6 +109,7 @@ abstract contract AbstractGrantee is IGrantee {
      */
     function getGranteeTargetFunding(address grantee)
         external
+        override
         view
         returns(uint256)
     {
@@ -120,6 +123,7 @@ abstract contract AbstractGrantee is IGrantee {
      */
     function getGranteeTotalPaid(address grantee)
         external
+        override
         view
         returns(uint256)
     {
@@ -133,6 +137,7 @@ abstract contract AbstractGrantee is IGrantee {
      */
     function getGranteePayoutApproved(address grantee)
         external
+        override
         view
         returns(uint256)
     {

@@ -2,15 +2,15 @@
 pragma solidity >=0.6.8 <0.7.0;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./modules/RefundableGrant.sol";
-import "./interfaces/IManager.sol";
+import "../storage/AbstractRefundable.sol";
+import "../interfaces/IManager.sol";
 
 /**
  * @title Grants Spec Abstract Contract.
  * @dev Grant request, funding, and management.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-abstract contract ManagedRefund is IManager, RefundableGrant {
+abstract contract ManagedRefund is IManager, AbstractRefundable {
     using SafeMath for uint256;
 
 
@@ -44,14 +44,17 @@ abstract contract ManagedRefund is IManager, RefundableGrant {
         // Refunds are based on percent donated. To ensure donors are awarded the correct refund amount,
         // refunds may only occur if the grant is cancelled,
         // or if no further funds are to be accepted (i.e. when there is a targetFunding)
+        
+        uint256 _targetFunding = this.getTargetFunding();
         require(
-            (targetFunding != 0 && targetFunding == totalFunding),
+            (_targetFunding != 0 && _targetFunding == this.getTotalFunding()),
             "approveRefund::Not Permitted. Partial Refunds not permitted if no targetFunding. cancelGrant instead."
         );
 
-        totalRefunded = totalRefunded.add(value);
+        uint256 newTotalRefunded = this.getTotalRefunded().add(value);
+        setTotalRefunded(newTotalRefunded);
 
-        emit LogRefundApproval(value, totalRefunded);
+        emit LogRefundApproval(value, newTotalRefunded);
     }
 
 }

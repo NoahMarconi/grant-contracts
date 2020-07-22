@@ -2,8 +2,8 @@
 pragma solidity >=0.6.8 <0.7.0;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./AbstractGrantee.sol";
-import "./Percentages.sol";
+import "./storage/AbstractGrantee.sol";
+import "./libraries/Percentages.sol";
 
 abstract contract GranteeConstructor is AbstractGrantee {
     using SafeMath for uint256;
@@ -37,6 +37,7 @@ abstract contract GranteeConstructor is AbstractGrantee {
 
         // Initialize Grantees.
         address lastAddress = address(0);
+        uint256 _cumulativeTargetFunding = 0;
         for (uint256 i = 0; i < _grantees.length; i++) {
             address currentGrantee = _grantees[i];
             uint256 currentAmount = _amounts[i];
@@ -57,15 +58,16 @@ abstract contract GranteeConstructor is AbstractGrantee {
             );
 
             lastAddress = currentGrantee;
-            grantees[currentGrantee].targetFunding = currentAmount;
+            setGranteeTargetFunding(currentGrantee, currentAmount);
 
-            cumulativeTargetFunding = cumulativeTargetFunding.add(currentAmount);
+            _cumulativeTargetFunding = _cumulativeTargetFunding.add(currentAmount);
 
             // Store address as reference.
-            granteeReference.push(currentGrantee);
+            addGranteeReference(currentGrantee);
         }
 
-        percentageBased = _percentageBased;
+        setCumulativeTargetFunding(_cumulativeTargetFunding);
+        setPercentageBased(_percentageBased);
 
     }
 

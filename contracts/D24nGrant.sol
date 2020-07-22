@@ -2,16 +2,18 @@
 
 pragma solidity >=0.6.8 <0.7.0;
 
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./shared/Percentages.sol";
-import "./shared/GranteeConstructor.sol";
-import "./shared/CancelableRefundable.sol";
-import "./shared/ManagedPayout.sol";
-import "./shared/FundGrant.sol";
-import "./shared/ManagedRefund.sol";
-import "./shared/PullPaymentGrant.sol";
-import "./shared/ManagedAllocation.sol";
+
+import "./shared/libraries/Percentages.sol";
 import "./shared/interfaces/ITrustedToken.sol";
+
+// Abstract Modules.
+import "./shared/modules/ManagedAllocation.sol";
+import "./shared/GranteeConstructor.sol";
+import "./shared/modules/ManagedRefund.sol";
+import "./shared/modules/FundGrant.sol";
+import "./shared/modules/PullPaymentGrant.sol";
+import "./shared/modules/ManagedPayout.sol";
+import "./shared/modules/CancelableRefundable.sol";
 
 
 /**
@@ -23,12 +25,7 @@ import "./shared/interfaces/ITrustedToken.sol";
  *      Percentage based allocation (y)
  * @author @NoahMarconi
  */
-contract D24nGrant is PullPaymentGrant, GranteeConstructor, ManagedAllocation, ManagedPayout, ManagedRefund, CancelableRefundable {
-    using SafeMath for uint256;
-
-    /*----------  Global Variables  ----------*/
-
-    bool fundingActive = true;               // When false new funding is rejected.
+contract D24nGrant is ManagedAllocation, GranteeConstructor, ManagedRefund, FundGrant, PullPaymentGrant, ManagedPayout, CancelableRefundable {
 
 
     /*----------  Constructor  ----------*/
@@ -52,13 +49,13 @@ contract D24nGrant is PullPaymentGrant, GranteeConstructor, ManagedAllocation, M
         GranteeConstructor(_grantees, _amounts, false)
     {
 
-        address _manager;               //  _manager Multisig or EOA address of grant manager.
-        uint256 _contractExpiration;    //  _contractExpiration Date after which payouts must be complete or anyone can trigger refunds.
-        bool _percentageOrFixed;        //  _percentageOrFixed Grantee targets are percentage based or fixed.
+        address _manager;            //  _manager Multisig or EOA address of grant manager.
+        uint256 _contractExpiration; //  _contractExpiration Date after which payouts must be complete or anyone can trigger refunds.
+        bool _percentageBased;       //  _percentageBased Grantee targets are percentage based or fixed.
         (
             _manager,
             _contractExpiration,
-            _percentageOrFixed
+            _percentageBased
         ) = abi.decode(_extraData, (address, uint256, bool));
 
         require(
@@ -74,143 +71,13 @@ contract D24nGrant is PullPaymentGrant, GranteeConstructor, ManagedAllocation, M
 
 
         // Initialize globals.
-        uri = _uri;
-        manager = _manager;
-        currency = _currency;
-        contractExpiration = _contractExpiration;
+        setUri(_uri);
+        setManager(_manager);
+        setCurrency(_currency);
+        setContractExpiration(_contractExpiration);
+        setPercentageBased(_percentageBased);
 
     }
 
 
-    /*----------  Public Helpers  ----------*/
-
-    /**
-     * @dev Funding status check.
-     * `fundingDeadline` may be 0, in which case `now` does not impact canFund response.
-     * `targetFunding` may be 0, in which case `totalFunding` oes not impact can fund response.
-     * @return true if can fund grant.
-     */
-    function canFund()
-        public
-        view
-        returns(bool)
-    {
-        return (
-            // solhint-disable-next-line not-rely-on-time
-            (fundingDeadline == 0 || fundingDeadline > now) &&
-            (targetFunding == 0 || totalFunding < targetFunding) &&
-            fundingActive &&
-            !grantCancelled
-        );
-    }
-
-
-    /*----------  Public Methods  ----------*/
-
-    /**
-     * @dev Fund a grant proposal.
-     * @param value Amount in WEI or ATOMIC_UNITS to fund.
-     * @return Cumulative funding received for this grant.
-     */
-    function fund(uint256 value)
-        public
-        nonReentrant // OpenZeppelin mutex due to sending change if over-funded.
-        returns (bool)
-    {
-
-        require(
-            canFund(),
-            "fund::Status Error. Grant not open to funding."
-        );
-
-        require(
-            !isManager(msg.sender),
-            "fund::Permission Error. Grant Manager cannot fund."
-        );
-
-        require(
-            grantees[msg.sender].targetFunding == 0,
-            "fund::Permission Error. Grantee cannot fund."
-        );
-
-        uint256 newTotalFunding = totalFunding.add(value);
-
-        uint256 change = 0;
-        if(targetFunding != 0 && newTotalFunding > targetFunding) {
-            change = newTotalFunding.sub(targetFunding);
-            newTotalFunding = targetFunding;
-        }
-
-        // Record Contribution.
-        donors[msg.sender].funded = donors[msg.sender].funded
-            .add(value)
-            .sub(change); // Account for change from over-funding.
-
-        // Update funding tally.
-        totalFunding = newTotalFunding;
-
-        // Defer to correct funding method.
-        if(currency == address(0)) {
-            fundWithEther(value, change);
-        } else {
-            fundWithToken(value, change);
-        }
-
-        // Log events.
-        emit LogFunding(msg.sender, value.sub(change));
-
-        if(targetFunding != 0 && totalFunding == targetFunding) {
-            emit LogFundingComplete();
-        }
-
-        return true;
-    }
-
-
-    /*----------  Private Methods  ----------*/
-
-    function fundWithEther(uint256 value, uint256 change)
-        private
-    {
-        require(
-            msg.value == value,
-            "fundWithEther::Invalid Argument. value must equal msg.value."
-        );
-
-        require(
-            msg.value > 0,
-            "fundWithEther::Invalid Value. msg.value must be greater than 0."
-        );
-
-        // Send change as refund.
-        if (change > 0) {
-            require(
-                // solhint-disable-next-line check-send-result
-                msg.sender.send(change),
-                "fundWithEther::Transfer Error. Unable to send change back to sender."
-            );
-        }
-    }
-
-    function fundWithToken(uint256 value, uint256 change)
-        private
-    {
-        require(
-            msg.value == 0,
-            "fundWithToken::Currency Error. Cannot send Ether to a token funded grant."
-        );
-
-        require(
-            value > 0,
-            "fundWithToken::::Invalid Value. value must be greater than 0."
-        );
-
-        // Subtract change before transferring to grant contract.
-        uint256 netValue = value.sub(change);
-        require(
-            ITrustedToken(currency)
-                .transferFrom(msg.sender, address(this), netValue),
-            "fund::Transfer Error. ERC20 token transferFrom failed."
-        );
-    }
 }

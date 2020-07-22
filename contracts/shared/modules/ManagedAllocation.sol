@@ -3,7 +3,8 @@ pragma solidity >=0.6.8 <0.7.0;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "../interfaces/IManager.sol";
-import "../interfaces/IGrantee.sol";
+import "../interfaces/IBaseGrant.sol";
+import "../storage/AbstractGrantee.sol";
 
 
 /**
@@ -11,7 +12,7 @@ import "../interfaces/IGrantee.sol";
  * @dev Handles reduction of grantee allocations.
  * @author @NoahMarconi
  */
-abstract contract ManagedAllocation is IManager, IGrantee {
+abstract contract ManagedAllocation is AbstractGrantee,  IManager {
     using SafeMath for uint256;
 
     /*----------  Events  ----------*/
@@ -29,27 +30,27 @@ abstract contract ManagedAllocation is IManager, IGrantee {
 
     /**
      * @dev Reduce a grantee's allocation by a specified value.
-     * @param value Amount to reduce by.
      * @param grantee Grantee address to reduce allocation from.
+     * @param value Amount to reduce by.
      */
-    function reduceAllocation(uint256 value, address grantee)
+    function reduceAllocation(address grantee, uint256 value)
         public
     {
         this.requireManager();
 
         require(
-            this.getTargetFunding(grantee) >= value,
+            this.getGranteeTargetFunding(grantee) >= value,
             "reduceAllocation::Invalid Argument. value exceeds grantee targetFunding."
         );
 
-        this.setTargetFunding(
+        setGranteeTargetFunding(
             grantee,
-            this.getTargetFunding(grantee).sub(value)
+            this.getGranteeTargetFunding(grantee).sub(value)
         );
 
 
         if (this.getPercentageBased()) {
-            this.setCumulativeTargetFunding(
+            setCumulativeTargetFunding(
                 this.getCumulativeTargetFunding().sub(value)
             );
         }

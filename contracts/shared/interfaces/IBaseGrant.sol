@@ -65,14 +65,6 @@ interface IBaseGrant {
         returns(uint256);
 
     /**
-     * @dev Cumulative funding donated by donors.
-     */
-    function getTotalFunding()
-        external
-        view
-        returns(uint256);
-
-    /**
      * @dev Date after which signal OR funds cannot be sent.
      */
     function getFundingDeadline()

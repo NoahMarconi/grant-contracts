@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.6.8 <0.7.0;
 
-import "./RefundableGrant.sol";
-import "./interfaces/IManager.sol";
+import "../storage/AbstractRefundable.sol";
+import "../storage/AbstractBaseGrant.sol";
+import "../interfaces/IManager.sol";
 
 /**
  * @title Cancelable and Refundable Grant.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-abstract contract CancelableRefundable is IManager, RefundableGrant  {
+abstract contract CancelableRefundable is IManager, AbstractRefundable, AbstractBaseGrant  {
 
     /*----------  Events  ----------*/
 
@@ -27,26 +28,30 @@ abstract contract CancelableRefundable is IManager, RefundableGrant  {
         public
     {
         require(
-            !grantCancelled,
+            !this.getGrantCancelled(),
             "cancelGrant::Status Error. Already cancelled."
         );
 
-        if (!isManager(msg.sender)) {
+        if (!this.isManager(msg.sender)) {
+            uint256 _fundingDeadline = this.getFundingDeadline();
+            uint256 _contractExpiration = this.getContractExpiration();
             // Non-manager may cancel grant if:
             //      1. Funding goal not met before fundingDeadline.
             //      2. Funds not completely dispersed before contractExpiration.
             require(
                 /* solhint-disable not-rely-on-time */
-                (fundingDeadline != 0 && fundingDeadline <= now && totalFunding < targetFunding) ||
-                (contractExpiration != 0 && contractExpiration <= now),
+                (_fundingDeadline != 0 && _fundingDeadline <= now && this.getTotalFunding() < this.getTargetFunding()) ||
+                (_contractExpiration != 0 && _contractExpiration <= now),
                 /* solhint-enable not-rely-on-time */
                 "cancelGrant::Invalid Sender. Sender must be manager or expired."
             );
         }
 
-        totalRefunded = totalRefunded.add(availableBalance());
+        setTotalRefunded(
+            this.getTotalRefunded().add(this.availableBalance())
+        );
 
-        grantCancelled = true;
+        setGrantCancelled(true);
 
         emit LogGrantCancellation();
     }

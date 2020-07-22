@@ -3,18 +3,19 @@ pragma solidity >=0.6.8 <0.7.0;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
-import "./interfaces/IBaseGrant.sol";
-import "./interfaces/IDonor.sol";
-import "./interfaces/IManager.sol";
-import "./interfaces/IGrantee.sol";
-import "./interfaces/ITrustedToken.sol";
+import "../interfaces/IBaseGrant.sol";
+import "../storage/AbstractDonorFund.sol";
+import "../interfaces/IManager.sol";
+import "../interfaces/IGrantee.sol";
+import "../interfaces/ITrustedToken.sol";
+import "../storage/AbstractFunding.sol";
 
 /**
  * @title Fund Grant Abstract Contract.
  * @dev Handles funding the grant.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-abstract contract FundGrant is ReentrancyGuard, IBaseGrant, IGrantee, IManager, IDonor {
+abstract contract FundGrant is ReentrancyGuard, AbstractFunding, AbstractDonorFund, IBaseGrant, IGrantee, IManager {
     using SafeMath for uint256;
 
     /*----------  Global Variables  ----------*/
@@ -74,7 +75,7 @@ abstract contract FundGrant is ReentrancyGuard, IBaseGrant, IGrantee, IManager, 
         );
 
         require(
-            this.getTargetFunding(msg.sender) == 0,
+            this.getGranteeTargetFunding(msg.sender) == 0,
             "fund::Permission Error. Grantee cannot fund."
         );
 
@@ -88,14 +89,14 @@ abstract contract FundGrant is ReentrancyGuard, IBaseGrant, IGrantee, IManager, 
         }
 
         // Record Contribution.
-        this.setDonorFunded(
+        setDonorFunded(
             msg.sender,
-            this.getDonorFunded().add(value).sub(change) // Account for change from over-funding.
+            this.getDonorFunded(msg.sender).add(value).sub(change) // Account for change from over-funding.
         );
 
 
         // Update funding tally.
-        totalFunding = newTotalFunding;
+        setTotalFunding(newTotalFunding);
 
         // Defer to correct funding method.
         if(this.getCurrency() == address(0)) {
@@ -107,7 +108,7 @@ abstract contract FundGrant is ReentrancyGuard, IBaseGrant, IGrantee, IManager, 
         // Log events.
         emit LogFunding(msg.sender, value.sub(change));
 
-        if(targetFunding != 0 && totalFunding == targetFunding) {
+        if(this.getTargetFunding() != 0 && this.getTotalFunding() == this.getTargetFunding()) {
             emit LogFundingComplete();
         }
 
@@ -156,7 +157,7 @@ abstract contract FundGrant is ReentrancyGuard, IBaseGrant, IGrantee, IManager, 
         // Subtract change before transferring to grant contract.
         uint256 netValue = value.sub(change);
         require(
-            ITrustedToken(currency)
+            ITrustedToken(this.getCurrency())
                 .transferFrom(msg.sender, address(this), netValue),
             "fund::Transfer Error. ERC20 token transferFrom failed."
         );

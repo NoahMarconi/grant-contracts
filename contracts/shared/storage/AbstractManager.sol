@@ -11,19 +11,7 @@ abstract contract AbstractManager {
 
     /*----------  Globals  ----------*/
 
-    address public manager;                      // Multisig or EOA address to manage grant.
-
-
-    /*----------  Modifiers  ----------*/
-
-    modifier onlyManager() {
-        require(
-            isManager(msg.sender),
-            "onlyManager::Permission Error. Function can only be called by manager."
-        );
-
-        _;
-    }
+    address private manager;                      // Multisig or EOA address to manage grant.
 
 
     /*----------  Public Helpers  ----------*/
@@ -47,4 +35,16 @@ abstract contract AbstractManager {
     }
 
 
+    /*----------  Internal Setter  ----------*/
+
+    function setManager(address _manager)
+        internal
+    {
+        require(
+            manager == address(0),
+            "setManager::Invalid Update. Manager cannot be changed once set."    
+        );
+
+        manager = _manager;
+    }
 }

@@ -7,7 +7,7 @@ pragma experimental ABIEncoderV2;
  * @dev Grant request, funding, and management.
  * @author @NoahMarconi
  */
-interface IDonor {
+interface IDonorFund {
 
     /*----------  Public Getters  ----------*/
 
@@ -16,15 +16,6 @@ interface IDonor {
      * @param donor address of donor to get.
      */
     function getDonorFunded(address donor)
-        external
-        view
-        returns(uint256);
-
-    /**
-     * @dev Get Donor refunded amount by address.
-     * @param donor address of donor to get.
-     */
-    function getDonorRefunded(address donor)
         external
         view
         returns(uint256);

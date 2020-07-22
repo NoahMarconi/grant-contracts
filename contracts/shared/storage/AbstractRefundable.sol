@@ -6,31 +6,45 @@ import "openzeppelin-solidity/contracts/utils/ReentrancyGuard.sol";
 import "../libraries/Percentages.sol";
 import "../interfaces/ITrustedToken.sol";
 import "../interfaces/IBaseGrant.sol";
-import "../interfaces/IDonor.sol";
+import "../interfaces/IDonorRefund.sol";
+import "../interfaces/IDonorFund.sol";
+import "../interfaces/IFunding.sol";
+
 
 /**
  * @title Grants Spec Abstract Contract.
  * @dev Grant request, funding, and management.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-abstract contract RefundableGrant is ReentrancyGuard, IBaseGrant, IDonor  {
+abstract contract AbstractRefundable is ReentrancyGuard, IBaseGrant, IDonorRefund, IDonorFund, IFunding  {
     using SafeMath for uint256;
 
 
     /*----------  Globals  ----------*/
-todo move out to storage?
-    uint256 public totalRefunded;                // Cumulative funding refunded to donors.
+
+    uint256 private totalRefunded;                       // Cumulative funding refunded to donors.
+    mapping(address => uint256) private donorRefunded;   // Cumulative amount refunded.
 
 
-    /*----------  Events  ----------*/
+    /*----------  Internal Setters  ----------*/
 
-    /**
-     * @dev Grant refunding funding.
-     * @param donor Address receiving refund.
-     * @param value Amount in WEI or ATOMIC_UNITS refunded.
-     */
-    event LogRefund(address indexed donor, uint256 value);
+    function setTotalRefunded(uint256 value)
+        internal
+    {
+        totalRefunded = value;
+    }
 
+
+    /*----------  Public Getters  ----------*/
+
+    function getTotalRefunded()
+        external
+        view
+        returns(uint256)
+    {
+        return totalRefunded;
+    }
+    
 
     /*----------  Public Methods  ----------*/
 
@@ -75,10 +89,7 @@ todo move out to storage?
         eligibleRefund = eligibleRefund.sub(this.getDonorRefunded(donor));
 
         // Update state.
-        this.setDonorRefunded(
-            donor,
-            this.getDonorRefunded(donor).add(eligibleRefund)
-        );
+        donorRefunded[donor] = this.getDonorRefunded(donor).add(eligibleRefund);
 
         // Send funds.
         if (this.getCurrency() == address(0)) {
@@ -99,5 +110,6 @@ todo move out to storage?
 
         return true;
     }
+
 
 }

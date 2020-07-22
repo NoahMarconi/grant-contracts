@@ -17,7 +17,7 @@ abstract contract AbstractFunding is IFunding {
     /*----------  Globals  ----------*/
 
     /* solhint-disable max-line-length */
-    uint256 public totalFunding;                 // Cumulative funding donated by donors.
+    uint256 private totalFunding;                 // Cumulative funding donated by donors.
     /* solhint-enable max-line-length */
 
 
@@ -39,10 +39,10 @@ abstract contract AbstractFunding is IFunding {
     /*----------  Shared Setters  ----------*/
 
     /**
-     * @dev Increase cumulative funding donated by donors.
-     * @param value amount to increase total funding by.
+     * @dev Set cumulative funding donated by donors.
+     * @param value new total funding amount.
      */
-    function increaseTotalFundingBy(uint256 value)
+    function setTotalFunding(uint256 value)
         internal
     {
         totalFunding = totalFunding.add(value);

@@ -2,9 +2,12 @@
 pragma solidity >=0.6.8 <0.7.0;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import "./interfaces/IManager.sol";
-import "./AbstractGrantee.sol";
-import "./Percentages.sol";
+import "../libraries/Percentages.sol";
+import "../storage/AbstractGrantee.sol";
+import "../interfaces/IManager.sol";
+import "../interfaces/IFunding.sol";
+import "../storage/AbstractBaseGrant.sol";
+import "../interfaces/IGranteeAllocation.sol";
 
 
 /**
@@ -12,7 +15,7 @@ import "./Percentages.sol";
  * @dev Handles approval of grantee payouts.
  * @author @NoahMarconi @ameensol @JFickel @ArnaudBrousseau
  */
-abstract contract ManagedPayout is IManager, AbstractGrantee  {
+abstract contract ManagedPayout is AbstractBaseGrant, AbstractGrantee, IManager, IFunding, IGranteeAllocation  {
     using SafeMath for uint256;
 
     /*----------  Events  ----------*/
@@ -40,8 +43,9 @@ abstract contract ManagedPayout is IManager, AbstractGrantee  {
 
         this.requireManager();
 
+        uint256 _targetFunding = this.getTargetFunding();
         require(
-            (targetFunding == 0 || targetFunding == totalFunding),
+            (_targetFunding == 0 || _targetFunding == this.getTotalFunding()),
             "approvePayout::Status Error. Cannot approve if funding target not met."
         );
 
@@ -51,16 +55,17 @@ abstract contract ManagedPayout is IManager, AbstractGrantee  {
         );
 
         require(
-            !grantCancelled,
+            !this.getGrantCancelled(),
             "approvePayout::Status Error. Cannot approve if grant is cancelled."
         );
 
-        if (percentageBased) {
+
+        if (this.getPercentageBased()) {
 
             uint256 granteesMaxAllocation = Percentages.maxAllocation(
-                grantees[grantee].targetFunding,
-                cumulativeTargetFunding,
-                totalFunding
+                this.getGranteeTargetFunding(grantee),
+                this.getCumulativeTargetFunding(),
+                this.getTotalFunding()
             );
 
             require(
@@ -71,7 +76,7 @@ abstract contract ManagedPayout is IManager, AbstractGrantee  {
         } else {
 
             require(
-                remainingAllocation(grantee) >= value,
+                this.remainingAllocation(grantee) >= value,
                 "approvePayout::Invalid Argument. value cannot exceed remaining allocation."
             );
 
@@ -79,8 +84,11 @@ abstract contract ManagedPayout is IManager, AbstractGrantee  {
 
 
         // Update state.
-        totalPaid = totalPaid.add(value);
-        grantees[grantee].payoutApproved = grantees[grantee].payoutApproved.add(value);
+        setTotalPaid(this.getTotalPaid().add(value));
+        setGranteePayoutApproved(
+            grantee,
+            this.getGranteePayoutApproved(grantee).add(value)
+        );
 
         emit LogPaymentApproval(grantee, value);
 
