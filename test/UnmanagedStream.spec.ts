@@ -248,6 +248,15 @@ describe("Unmanaged-Stream", () => {
         const granteeBalanceDelta3 = postGranteeBalance3.sub(preGranteeBalance3);
 
         // NOTE: Rounding wei to go to grantee with largest allocation and final grantee.
+        //
+        // > const AMOUNTS = [150, 456, 111, 23];
+        // undefined
+        // > const SUM_OF_AMOUNTS = AMOUNTS.reduce((x, y) => x + y);
+        // undefined
+        // > const PERCENTAGES = AMOUNTS.map(x => x/SUM_OF_AMOUNTS);
+        // undefined
+        // > PERCENTAGES.map(x => Math.floor(x*4))
+        // [ 0, 2, 0, 0 ]
         expect(granteeBalanceDelta0).to.be.equal(0);
         expect(granteeBalanceDelta1).to.be.equal(2);
         expect(granteeBalanceDelta2).to.be.equal(0);

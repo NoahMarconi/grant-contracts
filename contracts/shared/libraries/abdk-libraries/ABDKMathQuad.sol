@@ -2,7 +2,8 @@
  * ABDK Math Quad Smart Contract Library.  Copyright © 2019 by ABDK Consulting.
  * Author: Mikhail Vladimirov <mikhail.vladimirov@gmail.com>
  */
-pragma solidity ^0.5.0 || ^0.6.0;
+//solium-disable linebreak-style
+pragma solidity ^0.6.0;
 
 /**
  * Smart contract library of mathematical functions operating with IEEE 754
