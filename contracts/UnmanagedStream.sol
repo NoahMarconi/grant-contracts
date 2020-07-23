@@ -20,17 +20,7 @@ import "./shared/storage/AbstractBaseGrant.sol";
  *      WARNING: vulnerable to sending to Gas Token generating addresses. Trust in grantees not doing so is required.
  * @author @NoahMarconi
  */
-contract UnmanagedStream is ReentrancyGuard, AbstractBaseGrant, AbstractFunding, GranteeConstructor {
-
-
-    /*----------  Events  ----------*/
-
-    /**
-     * @dev Grant received funding.
-     * @param donor Address funding the grant.
-     * @param value Amount in WEI.
-     */
-    event LogFunding(address indexed donor, uint256 value);
+contract UnmanagedStream is ReentrancyGuard, AbstractBaseGrant, GranteeConstructor, AbstractFunding {
 
 
     /*----------  Constructor  ----------*/
@@ -78,6 +68,8 @@ contract UnmanagedStream is ReentrancyGuard, AbstractBaseGrant, AbstractFunding,
             "fallback::Invalid Value. msg.value must be greater than 0."
         );
 
+        uint256 numGrantees = this.getGranteeReferenceLength();
+        address lastGrantee = payable(this.getGranteeReference(numGrantees - 1));
         for (uint256 i = 0; i < this.getGranteeReferenceLength(); i++) {
             address payable currentGrantee = payable(this.getGranteeReference(i));
 
@@ -87,11 +79,19 @@ contract UnmanagedStream is ReentrancyGuard, AbstractBaseGrant, AbstractFunding,
                 msg.value
             );
 
-            (bool success, ) = currentGrantee.call{ value: eligiblePortion}("");
-            require(
-                success,
-                "fallback::Transfer Error. Unable to send eligiblePortion to Grantee."
-            );
+            if (currentGrantee == lastGrantee) {
+                // Handle rounding of a few wei.
+                // @audit question for auditor, should we enforce this is within expected threshold?
+                eligiblePortion = address(this).balance;
+            }
+
+            if (eligiblePortion > 0) {
+                (bool success, ) = currentGrantee.call{ value: eligiblePortion}("");
+                require(
+                    success,
+                    "fallback::Transfer Error. Unable to send eligiblePortion to Grantee."
+                );
+            }
 
         }
 
