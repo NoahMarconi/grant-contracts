@@ -1,7 +1,8 @@
 import chai from "chai";
 import chaiAlmost from "chai-almost";
 import * as waffle from "ethereum-waffle";
-import { Contract, Signer, utils } from "ethers";
+import { Contract, Signer, utils  } from "ethers";
+import { Provider } from "ethers/providers";
 import { BigNumber } from "ethers/utils/bignumber";
 
 import bre from '@nomiclabs/buidler';
@@ -18,6 +19,24 @@ const AMOUNTS = [150, 456, 111, 23];
 const SUM_OF_AMOUNTS = AMOUNTS.reduce((x, y) => x + y);
 const FUND_AMOUNT = utils.parseEther('5');
 
+async function callOnEach(fn: (x: any) => Promise<any>, wallets: Signer[]) {
+  let res = [];
+
+  for (let wallet of wallets) {
+    const el = await fn(await wallet.getAddress());
+    res.push(el);
+  }
+
+  return res;
+}
+
+async function getEtherBalances(provider: Provider, wallets: Signer[]) {
+  return await callOnEach((x) => provider.getBalance(x), wallets);
+}
+
+async function getGranteesTargetFunding(contract: Contract, wallets: Signer[]) {
+  return await callOnEach((x) => contract.getGranteeTargetFunding(x), wallets);
+}
 
 async function fixture(bre: BuidlerRuntimeEnvironment) {
   const provider = bre.waffle.provider;
@@ -66,12 +85,16 @@ async function fixture(bre: BuidlerRuntimeEnvironment) {
   await unmanagedStream.deployed();
 
   return {
-    donorWallet0,
-    donorWallet1,
-    granteeWallet0,
-    granteeWallet1,
-    granteeWallet2,
-    granteeWallet3,
+    donors: [
+      donorWallet0,
+      donorWallet1
+    ],
+    grantees: [
+      granteeWallet0,
+      granteeWallet1,
+      granteeWallet2,
+      granteeWallet3
+    ],
     provider,
     unmanagedStream
   };
@@ -80,44 +103,36 @@ async function fixture(bre: BuidlerRuntimeEnvironment) {
 describe("Unmanaged-Stream", () => {
 
   describe("With Ether", () => {
-    let _donorWallet0: Signer;
-    let _donorWallet1: Signer;
-    let _granteeWallet0: Signer;
-    let _granteeWallet1: Signer;
-    let _granteeWallet3: Signer;
-    let _granteeWallet2: Signer;
+    let _grantees: Signer[];
+    let _donors: Signer[];
     let _provider: any;
     let _unmanagedStream: Contract;
 
     before(async () => {
-
+      
       const {
-        donorWallet0,
-        donorWallet1,
-        granteeWallet0,
-        granteeWallet1,
-        granteeWallet2,
-        granteeWallet3,
+        donors,
+        grantees,
         provider,
         unmanagedStream
       } = await fixture(bre);
 
-      _donorWallet0 = donorWallet0;
-      _donorWallet1 = donorWallet1;
-      _granteeWallet0 = granteeWallet0;
-      _granteeWallet1 = granteeWallet1;
-      _granteeWallet2 = granteeWallet2;
-      _granteeWallet3 = granteeWallet3;
+      _grantees = grantees;
+      _donors = donors;
       _provider = provider;
       _unmanagedStream = unmanagedStream;
 
     });
 
     it("should record correct grantee amounts", async () => {
-      const grantee0Amount = await _unmanagedStream.getGranteeTargetFunding(await _granteeWallet0.getAddress());
-      const grantee1Amount = await _unmanagedStream.getGranteeTargetFunding(await _granteeWallet1.getAddress());
-      const grantee2Amount = await _unmanagedStream.getGranteeTargetFunding(await _granteeWallet2.getAddress());
-      const grantee3Amount = await _unmanagedStream.getGranteeTargetFunding(await _granteeWallet3.getAddress());
+
+      const [
+        grantee0Amount,
+        grantee1Amount,
+        grantee2Amount,
+        grantee3Amount
+      ] = await getGranteesTargetFunding(_unmanagedStream, _grantees);
+
 
       expect(grantee0Amount).to.eq(AMOUNTS[0]);
       expect(grantee1Amount).to.eq(AMOUNTS[1]);
@@ -129,6 +144,11 @@ describe("Unmanaged-Stream", () => {
     it("should record correct CumulativeTargetFunding", async () => {
       const cumulativeTargetFunding = await _unmanagedStream.getCumulativeTargetFunding();
       expect(cumulativeTargetFunding).to.eq(SUM_OF_AMOUNTS);
+    });
+
+    it("should record percentageBased as true", async () => {
+      const percentageBased = await _unmanagedStream.getPercentageBased();
+      expect(percentageBased).to.be.true;
     });
 
     it("should record correct currency", async () => {
@@ -148,21 +168,30 @@ describe("Unmanaged-Stream", () => {
       let _granteeBalance3: BigNumber;
 
       before(async () => {
-        _granteeBalance0 = await _provider.getBalance(await _granteeWallet0.getAddress());
-        _granteeBalance1 = await _provider.getBalance(await _granteeWallet1.getAddress());
-        _granteeBalance2 = await _provider.getBalance(await _granteeWallet2.getAddress());
-        _granteeBalance3 = await _provider.getBalance(await _granteeWallet3.getAddress());
+        const [
+          granteeBalance0,
+          granteeBalance1,
+          granteeBalance2,
+          granteeBalance3
+        ] = await getEtherBalances(_provider, _grantees);
 
-        await _donorWallet0.sendTransaction({ to: _unmanagedStream.address, value: FUND_AMOUNT });
+        _granteeBalance0 = granteeBalance0;
+        _granteeBalance1 = granteeBalance1;
+        _granteeBalance2 = granteeBalance2;
+        _granteeBalance3 = granteeBalance3;
+
+        await _donors[0].sendTransaction({ to: _unmanagedStream.address, value: FUND_AMOUNT });
       });
 
       it("should split funds correctly", async () => {
 
         // New balances.
-        const newGranteeBalance0 = await _provider.getBalance(await _granteeWallet0.getAddress());
-        const newGranteeBalance1 = await _provider.getBalance(await _granteeWallet1.getAddress());
-        const newGranteeBalance2 = await _provider.getBalance(await _granteeWallet2.getAddress());
-        const newGranteeBalance3 = await _provider.getBalance(await _granteeWallet3.getAddress());
+        const [
+          newGranteeBalance0,
+          newGranteeBalance1,
+          newGranteeBalance2,
+          newGranteeBalance3
+        ] = await getEtherBalances(_provider, _grantees);
 
         // Delta original balances to new balances.
         const granteeBalanceDelta0 = newGranteeBalance0.sub(_granteeBalance0);
@@ -171,10 +200,11 @@ describe("Unmanaged-Stream", () => {
         const granteeBalanceDelta3 = newGranteeBalance3.sub(_granteeBalance3);
 
         // Expected share of fund amount.
-        const granteeExpectedBalance0 = ((AMOUNTS[0] / SUM_OF_AMOUNTS) * parseInt(utils.formatEther(FUND_AMOUNT)));
-        const granteeExpectedBalance1 = ((AMOUNTS[1] / SUM_OF_AMOUNTS) * parseInt(utils.formatEther(FUND_AMOUNT)));
-        const granteeExpectedBalance2 = ((AMOUNTS[2] / SUM_OF_AMOUNTS) * parseInt(utils.formatEther(FUND_AMOUNT)));
-        const granteeExpectedBalance3 = ((AMOUNTS[3] / SUM_OF_AMOUNTS) * parseInt(utils.formatEther(FUND_AMOUNT)));
+        const pctTimesTotal = (num: number) => ((num / SUM_OF_AMOUNTS) * parseInt(utils.formatEther(FUND_AMOUNT)));
+        const granteeExpectedBalance0 = pctTimesTotal(AMOUNTS[0]);
+        const granteeExpectedBalance1 = pctTimesTotal(AMOUNTS[1]);
+        const granteeExpectedBalance2 = pctTimesTotal(AMOUNTS[2]);
+        const granteeExpectedBalance3 = pctTimesTotal(AMOUNTS[3]);
 
         // Contract Balance should be 0
         expect((await _provider.getBalance(await _unmanagedStream.address)).toNumber()).to.be.equal(0);
@@ -193,25 +223,29 @@ describe("Unmanaged-Stream", () => {
       });
 
       it("should emit LogFunding event", async () => {
-        await expect(_donorWallet1.sendTransaction({ to: _unmanagedStream.address, value: FUND_AMOUNT }))
+        await expect(_donors[1].sendTransaction({ to: _unmanagedStream.address, value: FUND_AMOUNT }))
         .to.emit(_unmanagedStream, 'LogFunding')
-        .withArgs(await _donorWallet1.getAddress(), FUND_AMOUNT );
+        .withArgs(await _donors[1].getAddress(), FUND_AMOUNT );
       });
 
       it("should handle donation of 1 wei", async () => {
         // Pre balances.
-        const preGranteeBalance0 = await _provider.getBalance(await _granteeWallet0.getAddress());
-        const preGranteeBalance1 = await _provider.getBalance(await _granteeWallet1.getAddress());
-        const preGranteeBalance2 = await _provider.getBalance(await _granteeWallet2.getAddress());
-        const preGranteeBalance3 = await _provider.getBalance(await _granteeWallet3.getAddress());
+        const [
+          preGranteeBalance0,
+          preGranteeBalance1,
+          preGranteeBalance2,
+          preGranteeBalance3
+        ] = await getEtherBalances(_provider, _grantees);
 
-        await _donorWallet1.sendTransaction({ to: _unmanagedStream.address, value: 1 });
+        await _donors[1].sendTransaction({ to: _unmanagedStream.address, value: 1 });
 
         // Post balances.
-        const postGranteeBalance0 = await _provider.getBalance(await _granteeWallet0.getAddress());
-        const postGranteeBalance1 = await _provider.getBalance(await _granteeWallet1.getAddress());
-        const postGranteeBalance2 = await _provider.getBalance(await _granteeWallet2.getAddress());
-        const postGranteeBalance3 = await _provider.getBalance(await _granteeWallet3.getAddress());
+        const [
+          postGranteeBalance0,
+          postGranteeBalance1,
+          postGranteeBalance2,
+          postGranteeBalance3
+        ] = await getEtherBalances(_provider, _grantees);
 
         // Delta original balances to new balances.
         const granteeBalanceDelta0 = postGranteeBalance0.sub(preGranteeBalance0);
@@ -228,18 +262,22 @@ describe("Unmanaged-Stream", () => {
 
       it("should handle donation of 4 wei", async () => {
         // Pre balances.
-        const preGranteeBalance0 = await _provider.getBalance(await _granteeWallet0.getAddress());
-        const preGranteeBalance1 = await _provider.getBalance(await _granteeWallet1.getAddress());
-        const preGranteeBalance2 = await _provider.getBalance(await _granteeWallet2.getAddress());
-        const preGranteeBalance3 = await _provider.getBalance(await _granteeWallet3.getAddress());
+        const [
+          preGranteeBalance0,
+          preGranteeBalance1,
+          preGranteeBalance2,
+          preGranteeBalance3
+        ] = await getEtherBalances(_provider, _grantees);
 
-        await _donorWallet1.sendTransaction({ to: _unmanagedStream.address, value: 4 });
+        await _donors[1].sendTransaction({ to: _unmanagedStream.address, value: 4 });
 
         // Post balances.
-        const postGranteeBalance0 = await _provider.getBalance(await _granteeWallet0.getAddress());
-        const postGranteeBalance1 = await _provider.getBalance(await _granteeWallet1.getAddress());
-        const postGranteeBalance2 = await _provider.getBalance(await _granteeWallet2.getAddress());
-        const postGranteeBalance3 = await _provider.getBalance(await _granteeWallet3.getAddress());
+        const [
+          postGranteeBalance0,
+          postGranteeBalance1,
+          postGranteeBalance2,
+          postGranteeBalance3
+        ] = await getEtherBalances(_provider, _grantees);
 
         // Delta original balances to new balances.
         const granteeBalanceDelta0 = postGranteeBalance0.sub(preGranteeBalance0);
