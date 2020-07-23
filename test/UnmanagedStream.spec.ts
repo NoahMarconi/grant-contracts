@@ -19,6 +19,7 @@ const AMOUNTS = [150, 456, 111, 23];
 const SUM_OF_AMOUNTS = AMOUNTS.reduce((x, y) => x + y);
 const FUND_AMOUNT = utils.parseEther('5');
 
+
 async function callOnEach(fn: (x: any) => Promise<any>, wallets: Signer[]) {
   let res = [];
 
@@ -109,6 +110,7 @@ describe("Unmanaged-Stream", () => {
     let _unmanagedStream: Contract;
 
     before(async () => {
+
       
       const {
         donors,
@@ -116,6 +118,7 @@ describe("Unmanaged-Stream", () => {
         provider,
         unmanagedStream
       } = await fixture(bre);
+
 
       _grantees = grantees;
       _donors = donors;
@@ -132,7 +135,6 @@ describe("Unmanaged-Stream", () => {
         grantee2Amount,
         grantee3Amount
       ] = await getGranteesTargetFunding(_unmanagedStream, _grantees);
-
 
       expect(grantee0Amount).to.eq(AMOUNTS[0]);
       expect(grantee1Amount).to.eq(AMOUNTS[1]);
@@ -168,7 +170,8 @@ describe("Unmanaged-Stream", () => {
       let _granteeBalance3: BigNumber;
 
       before(async () => {
-        const [
+
+      const [
           granteeBalance0,
           granteeBalance1,
           granteeBalance2,
