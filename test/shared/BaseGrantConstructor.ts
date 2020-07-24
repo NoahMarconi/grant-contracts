@@ -8,11 +8,6 @@ import { BuidlerRuntimeEnvironment } from '@nomiclabs/buidler/types';
 chai.use(waffle.solidity);
 const { expect } = chai;
 
-// TODO test
-//   totalPaid
-//   grantCancelled
-//   setters
-
 
 export const baseGrantConstructorTests = async (
     fixture: (bre: BuidlerRuntimeEnvironment, contractName: string) => Promise<any>,

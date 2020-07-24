@@ -14,6 +14,7 @@ chai.use(chaiAlmost(1/10**16));
 const { expect } = chai;
 
 import { granteeConstructorTests } from "./shared/GranteeConstructor";
+import { funding } from "./shared/Funding";
 import { baseGrantConstructorTests } from "./shared/BaseGrantConstructor";
 import { getEtherBalances } from "./shared/helpers";
 
@@ -132,6 +133,8 @@ describe("Unmanaged-Stream", () => {
       0,            // null contractExpiration.
       CONTRACT_NAME
     );
+
+    funding(fixture, AddressZero, CONTRACT_NAME);
 
     describe("sending funds", () => {
       let _granteeBalance0: BigNumber;
@@ -316,8 +319,9 @@ describe("Unmanaged-Stream", () => {
         expect(parseFloat(utils.formatEther(granteeBalanceDelta3).toString())).to.equal(AMOUNTS[3]);
       });
 
+      
     });
-
+    
   });
 
 
