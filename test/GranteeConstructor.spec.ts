@@ -55,7 +55,7 @@ async function fixture(bre: BuidlerRuntimeEnvironment, contractName: string) {
     constructorGrantees,                // Grantees 
     AMOUNTS,                            // Allocations
     true
-    );
+  );
     
   // Await Deploy.
   await contract.deployed();
@@ -108,9 +108,7 @@ describe("Grantee-Constructor", () => {
     granteeConstructorTests(
       fixture,     // Fixture for our grant.
       AMOUNTS,     // Grantee amount from global above.
-      URI,         // URI from global above.
       true,        // This fixture (unmanagedStream) uses percentage based grants.
-      AddressZero, // This fixture (unmanagedStream) uses ether.
       CONTRACT_NAME
     );
 

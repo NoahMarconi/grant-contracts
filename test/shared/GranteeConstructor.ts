@@ -11,14 +11,10 @@ const { expect } = chai;
 import { getGranteesTargetFunding } from "./helpers";
 
 
-
-
 export const granteeConstructorTests = async (
     fixture: (bre: BuidlerRuntimeEnvironment, contractName: string) => Promise<any>,
     amounts: number[],
-    uri: string,
     percentageBased: boolean,
-    currency: string,
     contractName: string
   ) => {
     describe("Constructor Tests", async () => {
@@ -30,7 +26,6 @@ export const granteeConstructorTests = async (
     
       before(async () => {
     
-        
         const {
           donors,
           grantees,

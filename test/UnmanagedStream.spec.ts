@@ -119,9 +119,7 @@ describe("Unmanaged-Stream", () => {
     granteeConstructorTests(
       fixture,     // Fixture for our grant.
       AMOUNTS,     // Grantee amount from global above.
-      URI,         // URI from global above.
       true,        // This fixture (unmanagedStream) uses percentage based grants.
-      AddressZero, // This fixture (unmanagedStream) uses ether.
       CONTRACT_NAME
     );
 
