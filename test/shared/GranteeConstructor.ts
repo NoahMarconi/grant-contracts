@@ -17,7 +17,7 @@ export const granteeConstructorTests = async (
     percentageBased: boolean,
     contractName: string
   ) => {
-    describe("Constructor Tests", async () => {
+    describe("GranteeConstructor - Constructor Tests", async () => {
       const SUM_OF_AMOUNTS = amounts.reduce((x, y) => x + y);    
       let _grantees: Signer[];
       let _donors: Signer[];

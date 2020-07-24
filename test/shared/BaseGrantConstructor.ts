@@ -23,7 +23,7 @@ export const baseGrantConstructorTests = async (
     contractExpiration: number,
     contractName: string
   ) => {
-    describe("Constructor Tests", async () => {
+    describe("BaseGrant - Constructor Tests", async () => {
       let _provider: any;
       let _contract: Contract;
     
