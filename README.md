@@ -172,5 +172,4 @@ npm run factory:deploy:ropsten
   * setters
 
 * Grantee tests
-  * Failing constructor
   * Pull payment

@@ -79,6 +79,7 @@ async function fixture(bre: BuidlerRuntimeEnvironment, contractName: string) {
 
 
 describe("Grantee-Constructor", () => {
+  const ethers = bre.ethers;
 
   let _grantees: Signer[];
   let _donors: Signer[];
@@ -103,15 +104,48 @@ describe("Grantee-Constructor", () => {
 
   });
 
-  describe("With Ether", () => {
+  
+  granteeConstructorTests(
+    fixture,     // Fixture for our grant.
+    AMOUNTS,     // Grantee amount from global above.
+    true,        // This fixture (unmanagedStream) uses percentage based grants.
+    CONTRACT_NAME
+  );
+    
+  it("should fail when no grantees passed", async () => {
+    const ContractFactory = await ethers.getContractFactory(CONTRACT_NAME);
+    await expect(ContractFactory.deploy([], AMOUNTS, true))
+      .to.be.revertedWith("constructor::Invalid Argument. Must have one or more grantees.");
+  });
 
-    granteeConstructorTests(
-      fixture,     // Fixture for our grant.
-      AMOUNTS,     // Grantee amount from global above.
-      true,        // This fixture (unmanagedStream) uses percentage based grants.
-      CONTRACT_NAME
-    );
+  it("should fail grantees array is not the same length as the AMOUNTs array", async () => {
+    const ContractFactory = await ethers.getContractFactory(CONTRACT_NAME);
+    await expect(ContractFactory.deploy([AddressZero], AMOUNTS, true))
+      .to.be.revertedWith("constructor::Invalid Argument. _grantees.length must equal _amounts.length");
+  });
 
+  it("should fail if an amount is 0", async () => {
+    const ContractFactory = await ethers.getContractFactory(CONTRACT_NAME);
+    await expect(ContractFactory.deploy([AddressZero], [0], true))
+      .to.be.revertedWith("constructor::Invalid Argument. currentAmount must be greater than 0.");
+  });
+
+  it("should fail if grantee array is out of order", async () => {
+    const ContractFactory = await ethers.getContractFactory(CONTRACT_NAME);
+    await expect(ContractFactory.deploy([AddressZero, "0x0000000000000000000000000000000000000001"], [0, 1], true))
+      .to.be.revertedWith("constructor::Invalid Argument. currentAmount must be greater than 0.");
+  });
+
+  it("should fail if amount causes an overflow", async () => {
+    const ContractFactory = await ethers.getContractFactory(CONTRACT_NAME);
+    await expect(ContractFactory.deploy(["0x0000000000000000000000000000000000000001", "0x0000000000000000000000000000000000000002"], [ethers.constants.MaxUint256, 1], true))
+      .to.be.revertedWith("revert SafeMath: addition overflow");
+  });
+
+  it("should fail if grantee is address 0 is out of order", async () => {
+    const ContractFactory = await ethers.getContractFactory(CONTRACT_NAME);
+    await expect(ContractFactory.deploy(["0x0000000000000000000000000000000000000001", AddressZero], [0, 1], true))
+      .to.be.revertedWith("constructor::Invalid Argument. currentAmount must be greater than 0.");
   });
 
 });
