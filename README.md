@@ -27,6 +27,7 @@ Project Sponsors: https://github.com/JFickel & https://molochdao.com/
   * [test](#test)
   * [scripts](#scripts)
 - [Set-up Guide](#Set-up-Guide)
+- [TODO](#TODO)
 
 
 # Variations
@@ -85,7 +86,7 @@ contract/shared root
 
   * [interfaces](./contracts/shared/interfaces/) contains contract interfaces.
   * [libraries](./contracts/shared/libraries/) contains shared libraries.
-  * [storage](./contracts/shared/storage/) is where contract state is managed. Each grant variant requires different state and variants requiring less state may simply avoid inheriting from storage contracts they do not need. All storage getters are external and all `setters` are `internal`.
+  * [storage](./contracts/shared/storage/) is where contract state is managed. Each grant variant requires different state and variants requiring less state may simply avoid inheriting from storage contracts they do not need. All storage `getters` are `external` and all `setters` are `internal`.
   * [modules](./contracts/shared/modules/) contains shared modules which tie one or more storage contracts together.
   * [WIP](./contracts/shared/WIP/) contains work in progress contracts.
 
@@ -103,7 +104,7 @@ test root
 
 All test specs are found in the root [test](./test/)  directory.
 
-The [shared](./test/shared/) directory contains general [helpers](./test/shared/helpers.ts) and tests intended to be reused multiple times. For example, testing that the constructor properly initialized the `BaseGrant` state should be tested for each grant variant; these tests are found in [BaseGrantConstructor.ts](./test/shared/BaseGrantConstructor.ts). 
+The [shared](./test/shared/) directory contains general [helpers](./test/shared/helpers.ts) and tests intended to be reused multiple times. For example, testing that the constructor properly initialized the `BaseGrant` state should be take place for every grant variant; these tests are found in [BaseGrantConstructor.ts](./test/shared/BaseGrantConstructor.ts). 
 
 
 ## scripts
